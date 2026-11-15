@@ -1,0 +1,55 @@
+/* =========================================================
+   v-lazy 指令全局占位样式（非 scoped）
+   统一懒加载图片的占位骨架与状态过渡，避免首屏外空白闪烁。
+   配色沿用 MIKU TEAL 设计 token（与 style.css 同源）。
+   ========================================================= */
+
+/* 基础：中性高级灰微光骨架占位 + 柔和渐变 */
+.lazy-img {
+  background-color: rgba(227, 247, 244, 0.45);
+  background-image: linear-gradient(
+    110deg,
+    rgba(227, 247, 244, 0.55) 25%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(227, 247, 244, 0.55) 75%
+  );
+  background-size: 200% 100%;
+  background-position: 0 0;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0.72;
+}
+
+/* 占位态：零滤镜纯 GPU 微光扫过（消除多图 blur 重绘掉帧） */
+.lazy-img[data-lazy-state='pending'],
+.lazy-img[data-lazy-state='loading'] {
+  animation: lazy-shimmer 1.2s ease-in-out infinite;
+}
+
+/* 加载完成：极速清晰渐显 */
+.lazy-img[data-lazy-state='loaded'] {
+  background-image: none;
+  background-color: transparent;
+  opacity: 1;
+  animation: none;
+}
+
+/* 失败态 */
+.lazy-img[data-lazy-state='error'] {
+  background-image: none;
+  background-color: rgba(241, 248, 247, 0.7);
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes lazy-shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
+}
+
+/* 尊重系统“减少动效”偏好（与项目降级约定一致） */
+@media (prefers-reduced-motion: reduce) {
+  .lazy-img[data-lazy-state='pending'],
+  .lazy-img[data-lazy-state='loading'] {
+    animation: none;
+  }
+}
