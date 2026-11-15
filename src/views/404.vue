@@ -8,17 +8,17 @@
         <div class="error-content">
             <div class="error-code">
                 <span class="code-digit">4</span>
-                <span class="code-emoji">😮</span>
+                <span class="code-emoji">😭</span>
                 <span class="code-digit">4</span>
             </div>
-            <h1 class="error-title">页面走丢了</h1>
-            <p class="error-desc">你访问的页面不存在或已被移除，请检查地址是否正确</p>
+            <h1 class="error-title">好像走到知识世界的边界了……</h1>
+            <p class="error-desc">访问的知识档案不存在或已转移，请返回主页继续浏览</p>
             <div class="error-actions">
-                <button class="btn-home" @click="router.push('/')">
-                    🏠 返回首页
+                <button class="btn-home tactile-btn" @click="router.push('/')">
+                    返回首页
                 </button>
-                <button class="btn-back" @click="router.back()">
-                    ← 返回上页
+                <button class="btn-back tactile-btn" @click="router.back()">
+                    ← 返回上一页
                 </button>
             </div>
         </div>
@@ -36,7 +36,7 @@ const router = useRouter();
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f5f6f8;
+    background: transparent;
     position: relative;
     overflow: hidden;
 }
@@ -50,8 +50,8 @@ const router = useRouter();
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+        linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
     background-size: 50px 50px;
 }
 
@@ -59,13 +59,13 @@ const router = useRouter();
     position: absolute;
     border-radius: 50%;
     filter: blur(80px);
-    opacity: 0.4;
+    opacity: 0.6;
 }
 
 .orb-1 {
     width: 300px;
     height: 300px;
-    background: #667eea;
+    background: #00f0ff;
     top: -80px;
     left: 10%;
     animation: orbFloat 8s ease-in-out infinite;
@@ -74,7 +74,7 @@ const router = useRouter();
 .orb-2 {
     width: 250px;
     height: 250px;
-    background: #F472B6;
+    background: #38bdf8;
     bottom: -60px;
     right: 10%;
     animation: orbFloat 8s ease-in-out infinite reverse;
@@ -123,7 +123,7 @@ const router = useRouter();
 .code-digit {
     font-size: 120px;
     font-weight: 900;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #4b8dff, #64c4ff, #8f84ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -132,12 +132,9 @@ const router = useRouter();
 }
 
 @keyframes codePulse {
-
-    0%,
-    100% {
+    0%, 100% {
         transform: scale(1);
     }
-
     50% {
         transform: scale(1.03);
     }
@@ -149,31 +146,27 @@ const router = useRouter();
 }
 
 @keyframes emojiBounce {
-
-    0%,
-    100% {
+    0%, 100% {
         transform: translateY(0) rotate(0deg);
     }
-
     25% {
         transform: translateY(-12px) rotate(-5deg);
     }
-
     75% {
         transform: translateY(-6px) rotate(5deg);
     }
 }
 
 .error-title {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 900;
-    color: #1a1a2e;
+    color: #1e293b;
     margin: 0 0 12px;
 }
 
 .error-desc {
-    font-size: 16px;
-    color: #999;
+    font-size: 15px;
+    color: #64748b;
     margin: 0 0 40px;
     line-height: 1.6;
 }
@@ -190,30 +183,34 @@ const router = useRouter();
     border: none;
     border-radius: 30px;
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     transition: all 0.3s;
 }
 
 .btn-home {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
+    background: linear-gradient(135deg, #4b8dff, #64c4ff);
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(75, 141, 255, 0.35);
 }
 
 .btn-home:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 25px rgba(75, 141, 255, 0.5);
 }
 
 .btn-back {
-    background: #fff;
-    color: #333;
-    border: 2px solid #e0e0e0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #1e293b;
+    border: 1px solid rgba(75, 141, 255, 0.25);
+    box-shadow: 0 4px 14px rgba(75, 141, 255, 0.08);
 }
 
 .btn-back:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: #4b8dff;
+    color: #2563eb;
     transform: translateY(-3px);
 }
 </style>

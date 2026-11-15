@@ -13,8 +13,11 @@
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.18.0",
+    "dompurify": "^3.4.15",
     "element-plus": "^2.14.2",
+    "marked": "^18.0.14",
     "pinia": "^3.0.4",
+    "three": "^0.186.0",
     "vue": "^3.5.38",
     "vue-router": "^5.1.0"
   },

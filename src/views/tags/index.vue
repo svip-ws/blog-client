@@ -1,39 +1,11 @@
 <template>
     <div class="page-container">
-        <!-- Hero 区域 -->
-        <div class="page-header">
-            <div class="hero-bg">
-                <div class="hero-orb orb-1"></div>
-                <div class="hero-orb orb-2"></div>
-                <div class="hero-orb orb-3"></div>
-                <div class="hero-grid"></div>
-            </div>
-            <div class="hero-content">
-                <div class="hero-badge">
-                    <el-icon>
-                        <PriceTag />
-                    </el-icon>
-                    TAGS
-                </div>
-                <h1 class="hero-title">标签云海</h1>
-                <p class="hero-subtitle">寻找多维度的技术交织点，在碎片化的标签中拼凑知识版图。</p>
-                <div class="hero-stats" v-if="!loading && tags.length > 0">
-                    <div class="stat-pill">
-                        <span class="stat-num">{{ tags.length }}</span>
-                        <span class="stat-text">个标签</span>
-                    </div>
-                    <div class="stat-pill">
-                        <span class="stat-num">{{ totalArticles }}</span>
-                        <span class="stat-text">篇文章</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <MikuPageHero motif="tags" title="标签" subtitle="聚焦具体技术细节与关键词，发现相互关联的精选内容。"
+            banner="/images/miku/miku_tags_banner.jpg" :stats="heroStats" />
 
         <!-- 加载骨架 -->
         <div v-if="loading" class="tag-grid">
-            <div v-for="i in 8" :key="i" class="tag-card skeleton">
-                <div class="tag-color-bar"></div>
+            <div v-for="i in 8" :key="i" class="tag-card glass-miku-card skeleton">
                 <div class="tag-body">
                     <div class="skeleton-line medium"></div>
                     <div class="skeleton-line short"></div>
@@ -42,29 +14,48 @@
         </div>
 
         <!-- 空状态 -->
-        <el-empty v-else-if="tags.length === 0" description="暂无标签数据，去后台给文章加个标签吧！" />
+        <div v-else-if="tags.length === 0" class="empty-state-box glass-miku-card">
+            <div class="empty-icon">🎧</div>
+            <p class="empty-text">暂无标签数据，去后台给文章加个标签吧！</p>
+            <span class="empty-note">✦ ♪ ♫ ♪ ✦</span>
+        </div>
 
-        <!-- 标签网格 -->
+        <!-- 标签网格 · 音符频谱卡 -->
         <div v-else class="tag-grid">
-            <div v-for="(tag, index) in tags" :key="tag.id" class="tag-card"
+            <div v-for="(tag, index) in tags" :key="tag.id"
+                v-holo="{ tilt: 2 }"
+                class="tag-card glass-miku-card tactile-btn"
                 :class="['theme-' + (index % 5), { 'no-articles': !tag.article_count }]"
-                :style="{ animationDelay: index * 0.06 + 's' }" @click="handleTagClick(tag)">
-                <div class="tag-color-bar"></div>
+                :style="{ animationDelay: index * 0.05 + 's' }" @click="handleTagClick(tag)">
+                <!-- Q版初音立绘 / 主题插画背景区 -->
+                <div class="tag-illus-wrap">
+                    <img
+                        v-if="getTagIllustration(tag, index)"
+                        :src="getTagIllustration(tag, index)"
+                        :alt="tag.name"
+                        class="tag-illus-img"
+                        loading="lazy"
+                        decoding="async"
+                        @error="onTagImgError(index)"
+                    />
+                    <div class="tag-scrim-mask"></div>
+                </div>
+
                 <div class="tag-body">
                     <div class="tag-top">
-                        <span class="tag-hash">#</span>
-                        <span class="tag-name">{{ tag.name }}</span>
+                        <span class="tag-name">{{ cleanTagName(tag.name) }}</span>
                     </div>
                     <div class="tag-bottom">
                         <span class="tag-count">
-                            <el-icon>
-                                <Document />
-                            </el-icon>
+                            <el-icon><Document /></el-icon>
                             {{ tag.article_count || 0 }} 篇
                         </span>
                         <span class="tag-arrow">→</span>
                     </div>
                 </div>
+
+                <!-- 左下角音符水印 -->
+                <span class="card-corner-note">♪</span>
             </div>
         </div>
     </div>
@@ -74,15 +65,39 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import request from '../../api/request';
-import { Document, PriceTag } from '@element-plus/icons-vue';
+import MikuPageHero from '../../components/common/MikuPageHero.vue';
+import { Document } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const loading = ref(false);
 const tags = ref([]);
 
+const cleanTagName = (name) => String(name || '').replace(/^#+/, '');
+
 const totalArticles = computed(() => {
     return tags.value.reduce((sum, t) => sum + (t.article_count || 0), 0);
 });
+
+const maxCount = computed(() => {
+    return Math.max(...tags.value.map(t => t.article_count || 0), 1);
+});
+
+/* Hero 统计胶囊：加载中或空数据时不渲染 */
+const heroStats = computed(() => {
+    if (loading.value || tags.value.length === 0) return [];
+    return [
+        { glyph: '✦', value: tags.value.length, label: '个标签' },
+        { glyph: '🎧', value: totalArticles.value, label: '篇关联' }
+    ];
+});
+
+/* 频谱波形比例（固定抖动序列，保证同一标签高度稳定可复现） */
+const WAVE = [1, 0.58, 0.86, 0.44, 0.76, 0.52, 0.9];
+
+const eqHeights = (count) => {
+    const base = Math.max(16, Math.round(((count || 0) / maxCount.value) * 100));
+    return WAVE.map(w => Math.max(14, Math.round(base * w)));
+};
 
 const fetchTags = async () => {
     loading.value = true;
@@ -100,6 +115,33 @@ const handleTagClick = (tag) => {
     router.push({ path: '/articles', query: { tag_id: tag.id } });
 };
 
+/* Q版初音立绘与主题插画库 */
+const MIKU_TAG_ILLUSTRATIONS = [
+    '/images/miku/miku_chibi_main.png',
+    '/images/miku/miku_wp_2.jpg',
+    '/images/miku/miku_wp_3.jpg',
+    '/images/miku/miku_wp_4.jpg',
+    '/images/miku/miku_wp_5.jpg',
+    '/images/miku/miku_wp_8.jpg'
+];
+
+const imgBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
+
+const brokenTagImgs = ref([]);
+const onTagImgError = (idx) => {
+    if (!brokenTagImgs.value.includes(idx)) brokenTagImgs.value.push(idx);
+};
+const getTagIllustration = (tag, index) => {
+    if (brokenTagImgs.value.includes(index)) return '';
+    const customCover = tag?.cover_url || tag?.cover || tag?.bg_image;
+    if (customCover) {
+        if (customCover.startsWith('http://') || customCover.startsWith('https://')) return customCover;
+        if (customCover.startsWith('/uploads/')) return imgBase ? `${imgBase}${customCover}` : customCover;
+        return customCover;
+    }
+    return MIKU_TAG_ILLUSTRATIONS[index % MIKU_TAG_ILLUSTRATIONS.length];
+};
+
 onMounted(() => {
     fetchTags();
 });
@@ -107,453 +149,391 @@ onMounted(() => {
 
 <style scoped>
 .page-container {
-    max-width: 900px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 16px 16px 60px;
+    padding: var(--navbar-clearance) 20px 60px;
 }
 
-@media (min-width: 768px) {
-    .page-container {
-        padding: 30px 20px 80px;
-    }
-}
-
-/* ==================== HERO ==================== */
-.page-header {
-    position: relative;
+/* ==================== 卡片基座 ==================== */
+.glass-miku-card {
     border-radius: 20px;
-    overflow: hidden;
-    margin-bottom: 28px;
-    background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 40%, #fff5f5 100%);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: none;
+    box-shadow: 0 10px 30px rgba(57, 197, 187, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (min-width: 768px) {
-    .page-header {
-        border-radius: 28px;
-        margin-bottom: 36px;
-    }
-}
-
-.hero-bg {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-}
-
-.hero-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-    background-size: 40px 40px;
-}
-
-.hero-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.4;
-}
-
-.orb-1 {
-    width: 140px;
-    height: 140px;
-    background: #667eea;
-    top: -40px;
-    left: -20px;
-    animation: orbDrift 8s ease-in-out infinite;
-}
-
-.orb-2 {
-    width: 120px;
-    height: 120px;
-    background: #A78BFA;
-    bottom: -30px;
-    right: -20px;
-    animation: orbDrift 10s ease-in-out infinite reverse;
-}
-
-.orb-3 {
-    width: 80px;
-    height: 80px;
-    background: #4ECDC4;
-    top: 20%;
-    right: 15%;
-    animation: orbDrift 9s ease-in-out infinite 2s;
-}
-
-@media (min-width: 768px) {
-    .orb-1 {
-        width: 220px;
-        height: 220px;
-        top: -60px;
-        left: -40px;
-        filter: blur(70px);
-        opacity: 0.5;
-    }
-
-    .orb-2 {
-        width: 180px;
-        height: 180px;
-        bottom: -50px;
-        right: -30px;
-    }
-
-    .orb-3 {
-        width: 140px;
-        height: 140px;
-    }
-}
-
-@keyframes orbDrift {
-
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-
-    33% {
-        transform: translate(20px, -15px) scale(1.05);
-    }
-
-    66% {
-        transform: translate(-15px, 10px) scale(0.95);
-    }
-}
-
-.hero-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    padding: 36px 20px;
-}
-
-@media (min-width: 768px) {
-    .hero-content {
-        padding: 50px 20px;
-    }
-}
-
-.hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 16px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 800;
-    border-radius: 20px;
-    letter-spacing: 3px;
-    margin-bottom: 14px;
-}
-
-.hero-title {
-    font-size: 30px;
-    font-weight: 900;
-    margin: 0 0 10px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #667eea 50%, #A78BFA 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@media (min-width: 768px) {
-    .hero-title {
-        font-size: 44px;
-    }
-}
-
-.hero-subtitle {
-    color: #8888aa;
-    font-size: 13px;
-    margin: 0 0 20px;
-    line-height: 1.5;
-}
-
-@media (min-width: 768px) {
-    .hero-subtitle {
-        font-size: 15px;
-        margin-bottom: 24px;
-    }
-}
-
-.hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.stat-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    border-radius: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
-
-@media (min-width: 768px) {
-    .stat-pill {
-        padding: 10px 24px;
-    }
-}
-
-.stat-num {
-    font-size: 20px;
-    font-weight: 900;
-    background: linear-gradient(135deg, #667eea, #A78BFA);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-@media (min-width: 768px) {
-    .stat-num {
-        font-size: 24px;
-    }
-}
-
-.stat-text {
-    font-size: 12px;
-    color: #999;
-}
-
-/* ==================== 标签网格 ==================== */
 .tag-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-}
-
-@media (min-width: 640px) {
-    .tag-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-    }
-}
-
-@media (min-width: 900px) {
-    .tag-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 20px;
 }
 
 /* ==================== 标签卡片 ==================== */
 .tag-card {
-    display: flex;
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
+    --tilt: 0deg;
+    --card-accent: var(--miku-teal);
+    position: relative;
+    padding: 20px;
     cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
-    opacity: 0;
-    animation: fadeUp 0.5s ease forwards;
+    overflow: hidden;
+    /* backwards：延迟期显示 from 态，结束后交还常态样式，避免锁死 hover 位移 */
+    animation: cardRiseIn 0.62s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    transform: rotate(var(--tilt, 0deg));
+}
+
+.theme-0 {
+    --card-accent: #39C5BB;
+}
+
+.theme-1 {
+    --card-accent: #FF7E9D;
+}
+
+.theme-2 {
+    --card-accent: #4ECDC4;
+}
+
+.theme-3 {
+    --card-accent: #12A79C;
+}
+
+.theme-4 {
+    --card-accent: #7B8CFF;
+}
+
+.tag-card:nth-child(3n+1) {
+    --tilt: -0.5deg;
+}
+
+.tag-card:nth-child(3n+2) {
+    --tilt: 0.5deg;
+}
+
+.tag-card:nth-child(3n+3) {
+    --tilt: -0.3deg;
+}
+
+@keyframes cardRiseIn {
+    from {
+        opacity: 0;
+        transform: rotate(var(--tilt, 0deg)) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: rotate(var(--tilt, 0deg)) translateY(0);
+    }
 }
 
 .tag-card:hover {
-    transform: translateY(-3px);
-    border-color: transparent;
+    transform: rotate(0deg) translateY(-8px) scale(1.02) !important;
+    border-color: color-mix(in srgb, var(--card-accent) 55%, transparent);
+    box-shadow: 0 16px 36px rgba(57, 197, 187, 0.22), 0 0 22px color-mix(in srgb, var(--card-accent) 32%, transparent);
+    z-index: 5;
 }
 
-.tag-color-bar {
-    width: 5px;
-    flex-shrink: 0;
+.tag-illus-wrap {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 20px;
+}
+
+.tag-illus-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 22%;
+    opacity: 0.16;
+    filter: saturate(1.05) blur(1.8px);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, filter 0.4s ease;
+}
+
+.tag-scrim-mask {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.72) 0%, rgba(238, 253, 250, 0.56) 55%, rgba(255, 238, 246, 0.44) 100%);
+    transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+.tag-card:hover .tag-illus-img {
+    transform: scale(1.08) rotate(1deg);
+    opacity: 0.92;
+    filter: saturate(1.28) contrast(1.06) blur(0px);
+}
+
+.tag-card:hover .tag-scrim-mask {
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.42) 0%, rgba(238, 253, 250, 0.28) 55%, rgba(255, 238, 246, 0.20) 100%);
+}
+
+.tag-card.no-articles {
+    opacity: 0.72;
+}
+
+
+/* 左下角音符水印 */
+.card-corner-note {
+    position: absolute;
+    left: 14px;
+    bottom: 10px;
+    font-size: 13px;
+    color: var(--card-accent);
+    opacity: 0.4;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.tag-card:hover .card-corner-note {
+    opacity: 0.9;
+    transform: translateY(-3px) rotate(-12deg);
 }
 
 .tag-body {
-    flex: 1;
-    min-width: 0;
-    padding: 16px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    position: relative;
+    z-index: 2;
 }
 
 .tag-top {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-width: 0;
+    margin-bottom: 12px;
+    padding-right: 68px;
 }
 
 .tag-hash {
-    font-size: 18px;
+    font-family: 'Audiowide', sans-serif;
+    font-size: 16px;
     font-weight: 900;
-    opacity: 0.3;
-    flex-shrink: 0;
-    line-height: 1;
+    color: var(--card-accent);
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.95);
+    transition: text-shadow 0.3s ease;
+}
+
+.tag-card:hover .tag-hash {
+    text-shadow: 0 0 12px var(--card-accent);
 }
 
 .tag-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #1a1a2e;
+    font-size: 16px;
+    font-weight: 900;
+    color: #0E2926;
+    text-shadow: 0 1px 4px rgba(255, 255, 255, 0.95);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 迷你频谱（按文章数归一化） */
+.tag-eq {
+    position: absolute;
+    right: 0;
+    top: -3px;
+    width: 46px;
+    height: var(--eq-h-sm);
+    display: flex;
+    align-items: flex-end;
+    gap: var(--eq-gap);
+    opacity: 0.42;
+    transition: opacity 0.3s ease;
+}
+
+.tag-eq i {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(180deg, var(--card-accent) 0%, #FF7E9D 100%);
+    transform-origin: bottom;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tag-card:hover .tag-eq {
+    opacity: 1;
+}
+
+.tag-card:hover .tag-eq i {
+    animation: eqPulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes eqPulse {
+    from {
+        transform: scaleY(0.42);
+    }
+
+    to {
+        transform: scaleY(1);
+    }
 }
 
 .tag-bottom {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    font-size: 12.5px;
+    color: #7A9E99;
+    padding-left: 18px;
 }
 
 .tag-count {
-    font-size: 12px;
-    color: #999;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    font-weight: 700;
+    color: #00687d;
+    text-shadow: 0 1px 4px rgba(255, 255, 255, 0.95);
 }
 
 .tag-arrow {
-    font-size: 16px;
-    color: #ddd;
-    transition: all 0.3s;
-    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 13px;
+    color: #085A57;
+    background: rgba(255, 255, 255, 0.88);
+    border: none;
+    box-shadow: 0 2px 6px rgba(8, 90, 87, 0.12);
+    transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
-.tag-card.no-articles {
-    opacity: 0.6;
+.tag-card:hover .tag-arrow {
+    transform: translateX(4px);
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #39C5BB, #FF7E9D);
+    border-color: transparent;
 }
 
-/* ==================== 5 种主题 ==================== */
-.theme-0 .tag-color-bar {
-    background: #FF6B6B;
-}
-
-.theme-0 .tag-hash {
-    color: #FF6B6B;
-}
-
-.theme-0:hover {
-    box-shadow: 0 10px 28px rgba(255, 107, 107, 0.1);
-}
-
-.theme-0:hover .tag-arrow {
-    color: #FF6B6B;
-    transform: translateX(3px);
-}
-
-.theme-1 .tag-color-bar {
-    background: #4ECDC4;
-}
-
-.theme-1 .tag-hash {
-    color: #4ECDC4;
-}
-
-.theme-1:hover {
-    box-shadow: 0 10px 28px rgba(78, 205, 196, 0.1);
-}
-
-.theme-1:hover .tag-arrow {
-    color: #4ECDC4;
-    transform: translateX(3px);
-}
-
-.theme-2 .tag-color-bar {
-    background: #A78BFA;
-}
-
-.theme-2 .tag-hash {
-    color: #A78BFA;
-}
-
-.theme-2:hover {
-    box-shadow: 0 10px 28px rgba(167, 139, 250, 0.1);
-}
-
-.theme-2:hover .tag-arrow {
-    color: #A78BFA;
-    transform: translateX(3px);
-}
-
-.theme-3 .tag-color-bar {
-    background: #F59E0B;
-}
-
-.theme-3 .tag-hash {
-    color: #F59E0B;
-}
-
-.theme-3:hover {
-    box-shadow: 0 10px 28px rgba(245, 158, 11, 0.1);
-}
-
-.theme-3:hover .tag-arrow {
-    color: #F59E0B;
-    transform: translateX(3px);
-}
-
-.theme-4 .tag-color-bar {
-    background: #667eea;
-}
-
-.theme-4 .tag-hash {
-    color: #667eea;
-}
-
-.theme-4:hover {
-    box-shadow: 0 10px 28px rgba(102, 126, 234, 0.1);
-}
-
-.theme-4:hover .tag-arrow {
-    color: #667eea;
-    transform: translateX(3px);
-}
-
-/* ==================== 骨架屏 ==================== */
+/* ==================== 骨架屏（原先无样式，加载态不可见） ==================== */
 .skeleton {
-    animation: none !important;
-    opacity: 1 !important;
     pointer-events: none;
 }
 
 .skeleton-line {
+    border-radius: 8px;
     height: 14px;
-    border-radius: 6px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-.skeleton-line.short {
-    width: 30%;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg,
+            rgba(57, 197, 187, 0.10) 25%,
+            rgba(57, 197, 187, 0.24) 37%,
+            rgba(57, 197, 187, 0.10) 63%);
+    background-size: 400% 100%;
+    animation: shimmerSweep 1.4s ease infinite;
 }
 
 .skeleton-line.medium {
-    width: 60%;
+    width: 62%;
+    height: 18px;
 }
 
-@keyframes shimmer {
+.skeleton-line.short {
+    width: 34%;
+}
+
+@keyframes shimmerSweep {
     0% {
-        background-position: 200% 0;
+        background-position: 100% 50%;
     }
 
     100% {
-        background-position: -200% 0;
+        background-position: 0 50%;
     }
 }
 
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
+/* ==================== 空状态 ==================== */
+.empty-state-box {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.empty-text {
+    font-size: 15px;
+    color: #4B6B66;
+    font-weight: 700;
+}
+
+.empty-note {
+    display: block;
+    margin-top: 10px;
+    font-family: 'Audiowide', sans-serif;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: var(--miku-teal);
+    opacity: 0.6;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 640px) {
+    .tag-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .tag-card {
+        padding: 16px 18px;
     }
+
+    .tag-card:hover {
+        transform: translateY(-4px) scale(1.01) !important;
+    }
+
+    .tag-eq {
+        width: 40px;
+        height: var(--eq-h-xs);
+    }
+}
+
+/* ==================== 动效克制 ==================== */
+@media (prefers-reduced-motion: reduce) {
+
+    .tag-card,
+    .skeleton-line,
+    .tag-eq i {
+        animation: none !important;
+    }
+
+    .tag-card {
+        opacity: 1;
+        transform: rotate(var(--tilt, 0deg));
+    }
+
+    .tag-card,
+    .tag-eq,
+    .tag-eq i,
+    .tag-hash,
+    .tag-arrow,
+    .card-corner-note {
+        transition: none;
+    }
+}
+
+html.reduce-motion .tag-card,
+html.reduce-motion .skeleton-line,
+html.reduce-motion .tag-eq i {
+    animation: none !important;
+}
+
+html.reduce-motion .tag-card {
+    opacity: 1;
+    transform: rotate(var(--tilt, 0deg));
+}
+
+html.reduce-motion .tag-card,
+html.reduce-motion .tag-eq,
+html.reduce-motion .tag-eq i,
+html.reduce-motion .tag-hash,
+html.reduce-motion .tag-arrow,
+html.reduce-motion .card-corner-note {
+    transition: none;
 }
 </style>

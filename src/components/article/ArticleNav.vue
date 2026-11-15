@@ -43,12 +43,14 @@ defineEmits(['navigate']);
 
 .nav-item {
     flex: 1;
-    background: #fff;
-    border-radius: 14px;
+    /* 性能：去掉 backdrop-filter（文章阅读页导航随正文滚动持续重模糊） */
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 16px;
     padding: 20px;
     cursor: pointer;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.08);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -56,7 +58,7 @@ defineEmits(['navigate']);
 
 .nav-item:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 28px rgba(56, 189, 248, 0.18);
 }
 
 .nav-item.next {
@@ -65,7 +67,8 @@ defineEmits(['navigate']);
 
 .nav-label {
     font-size: 12px;
-    color: #999;
+    color: #0284c7;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -77,11 +80,15 @@ defineEmits(['navigate']);
 
 .nav-title {
     font-size: 14px;
-    font-weight: 600;
-    color: #1a1a2e;
+    font-weight: 700;
+    color: #0f172a;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.nav-item:hover .nav-title {
+    color: #0284c7;
 }
 
 @media (max-width: 768px) {

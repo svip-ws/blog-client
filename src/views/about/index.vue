@@ -1,33 +1,19 @@
 <template>
-    <div class="about-page" @mousemove="onMouseMove">
-        <div class="cursor-glow" :style="glowPos"></div>
+    <div class="about-page">
+
 
         <!-- ==================== Hero ==================== -->
         <section class="hero">
             <div class="hero-bg">
                 <div class="hero-gradient"></div>
                 <div class="hero-grid"></div>
-                <div class="hero-noise"></div>
-                <div class="hero-orbs">
-                    <div v-for="n in 4" :key="n" :class="['h-orb', `h-orb-${n}`]"></div>
-                </div>
-                <div class="hero-particles">
-                    <div v-for="(p, i) in particles" :key="i" class="particle" :style="p"></div>
-                </div>
-                <div class="floating-shapes">
-                    <div v-for="n in 5" :key="n" :class="['shape', `shape-${n}`]"></div>
-                </div>
             </div>
 
             <div class="hero-content" :style="parallaxStyle">
-                <div class="hero-badge">
-                    <el-icon>
-                        <User />
-                    </el-icon> ABOUT ME
-                </div>
                 <h1 class="hero-title">
                     你好，我是
-                    <span class="gradient-text">{{ admin.nickname || '拾光笔记' }}</span>
+                    <span class="gradient-text">{{ admin.nickname || '初音小帅' }}</span>
+                    ♪
                 </h1>
                 <p class="hero-subtitle">
                     <span>{{ displayText }}</span><span class="typing-cursor">|</span>
@@ -36,7 +22,7 @@
                     <div class="stat-item" v-for="(s, i) in heroStats" :key="i">
                         <div class="stat-ring">
                             <svg viewBox="0 0 36 36">
-                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.1)"
+                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(57,197,187,.15)"
                                     stroke-width="2" />
                                 <circle cx="18" cy="18" r="15.5" fill="none" :stroke="s.color" stroke-width="2"
                                     stroke-linecap="round" :stroke-dasharray="`${s.percent} ${100 - s.percent}`"
@@ -50,12 +36,6 @@
                         <span class="stat-label">{{ s.label }}</span>
                     </div>
                 </div>
-                <div class="scroll-hint">
-                    <div class="scroll-mouse">
-                        <div class="scroll-dot"></div>
-                    </div>
-                    <span>SCROLL</span>
-                </div>
             </div>
         </section>
 
@@ -63,7 +43,6 @@
         <section class="section sec-about" ref="aboutRef">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="section-tag">INTRODUCE</span>
                     <h2 class="section-title">关于博主</h2>
                     <p class="section-desc">了解我的故事和技术历程</p>
                 </div>
@@ -74,14 +53,23 @@
                             <div class="avatar-ring">
                                 <div class="ring-spin"></div>
                             </div>
-                            <el-avatar :size="100" :src="admin.avatar" class="about-avatar">
-                                {{ admin.nickname?.charAt(0) || 'A' }}
+                            <el-avatar :size="100" :src="admin.avatar_url" class="about-avatar">
+                                {{ admin.nickname?.charAt(0) || '初' }}
                             </el-avatar>
                         </div>
-                        <h3>{{ admin.nickname || '拾光笔记' }}</h3>
-                        <p class="muted">全栈开发者 · 优秀作者</p>
+                        <h3>{{ admin.nickname || '初音小帅' }}</h3>
+                        <p class="muted">全栈开发者 · 知识研学者</p>
                         <div class="socials">
-                            <a v-for="(s, i) in socials" :key="i" class="social-btn" :title="s.label">
+                            <a
+                                v-for="(s, i) in socials"
+                                :key="i"
+                                class="social-btn"
+                                :title="s.label + (s.value ? `：${s.value}` : (s.url ? `：${s.url}` : ''))"
+                                :href="getSocialHref(s)"
+                                :target="isExternalLink(s) ? '_blank' : undefined"
+                                :rel="isExternalLink(s) ? 'noopener noreferrer' : undefined"
+                                @click="handleSocialClick($event, s)"
+                            >
                                 <el-icon :size="18">
                                     <component :is="s.icon" />
                                 </el-icon>
@@ -91,16 +79,15 @@
                     <div class="about-main">
                         <div class="about-text reveal tilt-card" @mousemove="onTiltMove" @mouseleave="onTiltLeave">
                             <div class="card-shine"></div>
-                            <p>欢迎来到「拾光笔记」，这是我个人的技术网站。</p>
+                            <p>欢迎来到「初音小站」，这是我个人的技术与二次元灵感空间。</p>
                             <p>我是一名全栈开发者，热衷于探索前后端技术，喜欢用代码解决问题，也喜欢用文字记录学习过程中的点滴。</p>
                             <p>这个网站使用 <strong>Vue3 + Express + MySQL</strong> 全栈开发，从前端到后端、从数据库到部署，都是独立开发完成。</p>
-                            <p>在这里，你可以找到技术分享、项目实战、学习笔记等内容。希望这些文章能对你有所帮助。</p>
+                            <p>在这里，你可以找到技术分享、项目实战、学习笔记与 3D 闪卡内容。希望这些内容能对你有所帮助。</p>
                         </div>
                         <div class="highlight-grid">
                             <div v-for="(h, i) in highlights" :key="i" class="highlight-card reveal tilt-card"
                                 @mousemove="onTiltMove" @mouseleave="onTiltLeave">
                                 <div class="card-shine"></div>
-                                <div class="hl-glow" :style="{ background: h.color }"></div>
                                 <el-icon :size="22" :color="h.color">
                                     <component :is="h.icon" />
                                 </el-icon>
@@ -119,7 +106,6 @@
         <section class="section sec-tech" ref="techRef">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="section-tag">TECH STACK</span>
                     <h2 class="section-title">技术栈</h2>
                     <p class="section-desc">这个网站使用到的技术</p>
                 </div>
@@ -147,7 +133,6 @@
         <section class="section sec-timeline" ref="timelineRef">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="section-tag">JOURNEY</span>
                     <h2 class="section-title">发展历程</h2>
                     <p class="section-desc">网站从零到一的成长故事</p>
                 </div>
@@ -177,7 +162,6 @@
         <section class="section sec-data" ref="dataRef">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="section-tag">BLOG DATA</span>
                     <h2 class="section-title">网站数据</h2>
                     <p class="section-desc">截至目前的网站运营数据</p>
                 </div>
@@ -199,13 +183,12 @@
         <section class="section sec-contact" ref="contactRef">
             <div class="container">
                 <div class="section-head reveal">
-                    <span class="section-tag">CONTACT</span>
                     <h2 class="section-title">联系方式</h2>
                     <p class="section-desc">欢迎与我交流</p>
                 </div>
                 <div class="contact-grid">
                     <div v-for="(c, i) in contacts" :key="i" class="contact-card reveal tilt-card"
-                        @mousemove="onTiltMove" @mouseleave="onTiltLeave">
+                        @mousemove="onTiltMove" @mouseleave="onTiltLeave" @click="handleContactClick(c)">
                         <div class="card-shine"></div>
                         <div class="icon-box" :style="{ background: c.bg }">
                             <el-icon :size="22" :color="c.color">
@@ -213,7 +196,10 @@
                             </el-icon>
                         </div>
                         <h4>{{ c.label }}</h4>
-                        <p>{{ c.value }}</p>
+                        <p v-if="c.link">
+                            <a :href="c.link" target="_blank" class="contact-link-text" @click.stop>{{ c.value }}</a>
+                        </p>
+                        <p v-else>{{ c.value }}</p>
                     </div>
                 </div>
             </div>
@@ -222,7 +208,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, markRaw } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted, markRaw } from 'vue';
+import { ElMessage } from 'element-plus';
 import { getAdminInfo } from '../../api/user';
 import request from '../../api/request';
 import {
@@ -248,6 +235,11 @@ const I = {
 const admin = ref({});
 const cursorX = ref(-100), cursorY = ref(-100);
 const mouseX = ref(0), mouseY = ref(0);
+
+// 站点统计：useStatsSync 周期性拉取 /stats/summary，下方 heroStats / dataCards 即时反映最新值
+// 保留本地 ref 以兼容一次性数字动画；后续轮询通过 watch 直接同步
+import { useStatsSync } from '../../composables/useStatsSync';
+const statsStore = useStatsSync();
 const articleCount = ref(0), tagCount = ref(0), categoryCount = ref(0), commentCount = ref(0);
 
 const aboutRef = ref(null), techRef = ref(null), timelineRef = ref(null), dataRef = ref(null), contactRef = ref(null);
@@ -280,10 +272,10 @@ const parallaxStyle = computed(() => {
 });
 
 const heroStats = computed(() => [
-    { icon: I.Document, label: '篇文章', value: articleCount.value, color: '#667eea', percent: 80 },
-    { icon: I.PriceTag, label: '个标签', value: tagCount.value, color: '#4ECDC4', percent: 65 },
-    { icon: I.FolderOpened, label: '个分类', value: categoryCount.value, color: '#FF6B6B', percent: 50 },
-    { icon: I.ChatDotRound, label: '条评论', value: commentCount.value, color: '#FCD34D', percent: 70 },
+    { icon: I.Document, label: '篇文章', value: articleCount.value, color: '#39C5BB', percent: 80 },
+    { icon: I.PriceTag, label: '个标签', value: tagCount.value, color: '#12A79C', percent: 65 },
+    { icon: I.FolderOpened, label: '个分类', value: categoryCount.value, color: '#FF7E9D', percent: 50 },
+    { icon: I.ChatDotRound, label: '条评论', value: commentCount.value, color: '#39C5BB', percent: 70 },
 ]);
 
 const particles = computed(() =>
@@ -300,74 +292,161 @@ const particles = computed(() =>
 
 /* ========== 静态数据 ========== */
 const socials = [
-    { icon: I.Message, label: '邮件' },
-    { icon: I.Link, label: 'GitHub' },
-    { icon: I.ChatLineRound, label: '微信' },
+    { icon: I.Message, label: '邮箱',value: 'canada.svip@gmail.com' },
+    { icon: I.Link, label: 'BiliBili', url: 'https://space.bilibili.com/1772424360?spm_id_from=333.1007.0.0' },
+    { icon: I.ChatLineRound, label: '微信', value: 'svip888ws' },
 ];
 
+const getSocialHref = (s) => {
+    const raw = s.url || s.link;
+    if (!raw) return 'javascript:void(0);';
+    if (raw.startsWith('mailto:') || raw.startsWith('http://') || raw.startsWith('https://')) {
+        return raw;
+    }
+    if (raw.includes('@')) {
+        return `mailto:${raw}`;
+    }
+    return raw;
+};
+
+const isExternalLink = (s) => {
+    const raw = s.url || s.link;
+    return Boolean(raw && (raw.startsWith('http://') || raw.startsWith('https://')));
+};
+
+const handleSocialClick = (e, s) => {
+    const targetUrl = s.url || s.link;
+
+    // 复制类型（如微信）
+    if (!targetUrl && s.value) {
+        e?.preventDefault?.();
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(s.value).then(() => {
+                ElMessage.success(`已复制 ${s.label}：${s.value}`);
+            }).catch(() => {
+                ElMessage.info(`${s.label}：${s.value}`);
+            });
+        } else {
+            ElMessage.info(`${s.label}：${s.value}`);
+        }
+        return;
+    }
+
+    if (!targetUrl) {
+        e?.preventDefault?.();
+        ElMessage.info(`${s.label}暂未配置跳转链接`);
+        return;
+    }
+
+    // 邮箱类型：自动复制邮箱并唤起本地邮件客户端
+    if (targetUrl.startsWith('mailto:') || (targetUrl.includes('@') && !targetUrl.startsWith('http'))) {
+        e?.preventDefault?.();
+        const mailAddress = targetUrl.replace(/^mailto:/, '');
+        const mailtoLink = targetUrl.startsWith('mailto:') ? targetUrl : `mailto:${targetUrl}`;
+
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(mailAddress).catch(() => {});
+        }
+        window.location.href = mailtoLink;
+        ElMessage.success(`正在唤起邮件客户端，已复制邮箱：${mailAddress}`);
+        return;
+    }
+
+    // 外部链接（如 GitHub 等）
+    if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+        e?.preventDefault?.();
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        return;
+    }
+
+    window.open(targetUrl, '_blank');
+};
+
 const highlights = [
-    { icon: I.Promotion, title: '全栈开发', desc: 'Vue3 + Express + MySQL', color: '#667eea' },
-    { icon: I.EditPen, title: '技术写作', desc: '记录学习，分享经验', color: '#4ECDC4' },
-    { icon: I.Brush, title: 'UI 设计', desc: '注重用户体验与视觉美感', color: '#FF6B6B' },
-    { icon: I.Sunrise, title: '持续学习', desc: '保持好奇心，拥抱新技术', color: '#F59E0B' },
+    { icon: I.Promotion, title: '全栈开发', desc: 'Vue3 + Express + MySQL', color: '#39C5BB' },
+    { icon: I.EditPen, title: '技术写作', desc: '记录学习，分享经验', color: '#12A79C' },
+    { icon: I.Brush, title: 'UI 设计', desc: '注重用户体验与视觉美感', color: '#FF7E9D' },
+    { icon: I.Sunrise, title: '持续学习', desc: '保持好奇心，拥抱新技术', color: '#39C5BB' },
 ];
 
 const techStack = [
-    { icon: I.Monitor, name: 'Vue3', desc: '前端框架', level: 90, color: '#4FC08D', bg: '#f0fdf4' },
-    { icon: I.Connection, name: 'Express', desc: '后端框架', level: 85, color: '#333', bg: '#f5f5f5' },
-    { icon: I.Coin, name: 'MySQL', desc: '关系型数据库', level: 80, color: '#4479A1', bg: '#eff6ff' },
-    { icon: I.Cpu, name: 'Vite', desc: '构建工具', level: 88, color: '#646CFF', bg: '#f5f3ff' },
-    { icon: I.Aim, name: 'Element Plus', desc: 'UI 组件库', level: 92, color: '#409EFF', bg: '#ecf5ff' },
-    { icon: I.DataLine, name: 'JWT', desc: '身份认证', level: 78, color: '#F59E0B', bg: '#fffbeb' },
-    { icon: I.Link, name: 'RESTful API', desc: '接口设计', level: 85, color: '#8B5CF6', bg: '#f5f3ff' },
-    { icon: I.Brush, name: 'CSS3', desc: '样式与动画', level: 88, color: '#E44D26', bg: '#fff7ed' },
+    { icon: I.Monitor, name: 'Vue3', desc: '前端框架', level: 90, color: '#12A79C', bg: '#E3F7F4' },
+    { icon: I.Connection, name: 'Express', desc: '后端框架', level: 85, color: '#39C5BB', bg: '#EAF9F8' },
+    { icon: I.Coin, name: 'MySQL', desc: '关系型数据库', level: 80, color: '#12A79C', bg: '#E3F7F4' },
+    { icon: I.Cpu, name: 'Vite', desc: '构建工具', level: 88, color: '#FF7E9D', bg: '#FFF0F5' },
+    { icon: I.Aim, name: 'Element Plus', desc: 'UI 组件库', level: 92, color: '#39C5BB', bg: '#EAF9F8' },
+    { icon: I.DataLine, name: 'JWT', desc: '身份认证', level: 78, color: '#FF7E9D', bg: '#FFF0F5' },
+    { icon: I.Link, name: 'RESTful API', desc: '接口设计', level: 85, color: '#12A79C', bg: '#E3F7F4' },
+    { icon: I.Brush, name: 'CSS3', desc: '样式与动画', level: 88, color: '#39C5BB', bg: '#EAF9F8' },
 ];
 
 const timeline = [
-    { date: '2026年5月', title: '需求分析与立项', desc: '明确博客系统定位，确定支持文章发布、分类管理、评论互动、商品展示等核心功能，完成需求文档编写', color: '#667eea', icon: I.Flag },
-    { date: '2026年5月', title: '技术选型', desc: '前端 Vue3 + uni-app，后端 Express + MySQL，管理端 React + Vite，确定项目整体技术栈', color: '#764ba2', icon: I.DataLine },
-    { date: '2026年5月', title: '数据库设计', desc: '设计用户表、文章表、分类表、标签表、评论表、商品表、订单表等核心数据模型，建立表关联', color: '#4ECDC4', icon: I.Trophy },
-    { date: '2026年6月初', title: '后端基础架构搭建', desc: '初始化 Express 项目，配置中间件（CORS、JWT、文件上传），搭建路由与控制器分层架构', color: '#667eea', icon: I.Flag },
-    { date: '2026年6月初', title: '用户认证系统', desc: '实现注册登录、JWT 鉴权、角色权限（管理员/普通用户）、bcrypt 密码加密', color: '#F59E0B', icon: I.Medal },
-    { date: '2026年6月中', title: '文章管理 API', desc: '完成文章 CRUD、分页查询、分类筛选、标签关联、上下篇导航、富文本内容存储', color: '#4ECDC4', icon: I.Trophy },
-    { date: '2026年6月中', title: '分类与标签系统', desc: '实现分类树形结构、标签多对多关联、按分类/标签筛选文章等接口', color: '#764ba2', icon: I.DataLine },
-    { date: '2026年6月中', title: '评论系统', desc: '支持文章评论、回复、评论分页、最新评论查询、评论数量统计', color: '#FF6B6B', icon: I.Medal },
-    { date: '2026年6月下', title: '商品与订单模块', desc: '实现商品管理、商品分类、购物车逻辑、订单创建与查询接口', color: '#F59E0B', icon: I.Trophy },
-    { date: '2026年6月下', title: '图片上传与管理', desc: '基于 multer 实现图片上传、本地存储、缩略图生成、文件管理', color: '#667eea', icon: I.Flag },
-    { date: '2026年7月初', title: 'PC 管理端启动', desc: '基于 React + Vite 搭建后台管理面板，实现登录页、侧边栏导航、顶部导航布局', color: '#764ba2', icon: I.DataLine },
-    { date: '2026年7月初', title: '仪表盘与数据统计', desc: '集成 ECharts 图表，实现文章数量、访问量、评论量、用户增长等数据可视化面板', color: '#4ECDC4', icon: I.Trophy },
-    { date: '2026年7月中', title: '文章管理后台', desc: '实现文章列表（搜索、筛选、排序）、富文本编辑器、Markdown 编辑器、封面图上传、草稿箱', color: '#FF6B6B', icon: I.Medal },
-    { date: '2026年7月中', title: '分类标签管理后台', desc: '分类的增删改查、拖拽排序；标签的颜色配置、批量操作、使用频次统计', color: '#F59E0B', icon: I.Flag },
-    { date: '2026年7月中', title: '用户与评论管理', desc: '用户列表、角色分配、禁用启用；评论审核、批量删除、敏感词过滤', color: '#667eea', icon: I.DataLine },
-    { date: '2026年7月下', title: '商品管理后台', desc: '商品上下架、库存管理、价格设置、商品分类、轮播图管理', color: '#764ba2', icon: I.Trophy },
-    { date: '2026年7月下', title: '站点设置模块', desc: '网站名称、Logo、SEO 信息、公告管理、关于页信息配置', color: '#4ECDC4', icon: I.Medal },
-    { date: '2026年8月初', title: '小程序项目启动', desc: '基于 uni-app + Vue3 搭建微信小程序项目，配置 TabBar、路由、请求封装', color: '#FF6B6B', icon: I.Flag },
-    { date: '2026年8月初', title: '首页与文章模块', desc: '实现轮播图、推荐文章、文章列表（分页加载）、文章详情（目录解析、阅读进度、点赞收藏）', color: '#F59E0B', icon: I.DataLine },
-    { date: '2026年8月中', title: '分类与搜索功能', desc: '分类页面（文章/商品分类切换）、标签筛选、全文搜索、搜索历史、热门文章推荐', color: '#667eea', icon: I.Trophy },
-    { date: '2026年8月中', title: '商城模块开发', desc: '商品列表（分类筛选、价格/销量排序）、商品详情、购物车（增删改查、全选、数量调整）', color: '#764ba2', icon: I.Medal },
-    { date: '2026年8月中', title: '订单系统', desc: '订单确认页（地址选择、备注）、订单创建、订单列表（按状态筛选）、删除订单', color: '#4ECDC4', icon: I.Flag },
-    { date: '2026年8月下', title: '个人中心', desc: '微信登录授权、浏览历史、我的收藏、消息中心（评论通知、系统通知）、缓存管理', color: '#FF6B6B', icon: I.DataLine },
-    { date: '2026年8月下', title: '自定义组件开发', desc: '封装 NavBar 导航栏、ArticleCard 文章卡片、LoadMore 加载状态等通用组件', color: '#F59E0B', icon: I.Trophy },
-    { date: '2026年9月初', title: '全端联调测试', desc: 'PC 管理端、小程序端、后端 API 全链路联调，修复接口兼容性、数据格式不一致等问题', color: '#667eea', icon: I.Medal },
-    { date: '2026年9月初', title: '性能优化', desc: '图片懒加载、列表虚拟滚动、API 请求防抖、本地缓存策略、分包加载优化', color: '#764ba2', icon: I.Flag },
-    { date: '2026年9月中', title: 'UI 细节打磨', desc: '统一配色方案（紫蓝渐变主题）、动画过渡效果、空状态设计、错误提示优化、深色模式适配', color: '#4ECDC4', icon: I.DataLine },
-    { date: '2026年9月中', title: '安全性加固', desc: 'XSS 防护、SQL 注入防护、接口限流、JWT 过期处理、文件上传类型校验、敏感数据脱敏', color: '#FF6B6B', icon: I.Trophy },
-    { date: '2026年9月下', title: '部署与上线', desc: '后端部署至云服务器（Nginx 反向代理 + PM2 进程管理），数据库迁移，小程序提审上线', color: '#F59E0B', icon: I.Medal },
-    { date: '2026年9月下', title: '项目完成', desc: '全部功能上线运行，PC 端 + 小程序端 + 后端 API 三端完整交付，持续迭代优化中', color: '#667eea', icon: I.Flag },
+    { date: '2026年5月', title: '需求分析与立项', desc: '明确博客系统定位，确定支持文章发布、分类管理、评论互动、商品展示等核心功能，完成需求文档编写', color: '#39C5BB', icon: I.Flag },
+    { date: '2026年5月', title: '技术选型', desc: '前端 Vue3 + 微信小程序，后端 Express + MySQL，管理端 Vue 3 + Vite，确定项目整体技术栈', color: '#12A79C', icon: I.DataLine },
+    { date: '2026年5月', title: '数据库设计', desc: '设计用户表、文章表、分类表、标签表、评论表、商品表、订单表等核心数据模型，建立表关联', color: '#FF7E9D', icon: I.Trophy },
+    { date: '2026年6月初', title: '后端基础架构搭建', desc: '初始化 Express 项目，配置中间件（CORS、JWT、文件上传），搭建路由与控制器分层架构', color: '#39C5BB', icon: I.Flag },
+    { date: '2026年6月初', title: '用户认证系统', desc: '实现注册登录、JWT 鉴权、角色权限（管理员/普通用户）、bcrypt 密码加密', color: '#12A79C', icon: I.Medal },
+    { date: '2026年6月中', title: '文章管理 API', desc: '完成文章 CRUD、分页查询、分类筛选、标签关联、上下篇导航、富文本内容存储', color: '#FF7E9D', icon: I.Trophy },
+    { date: '2026年6月中', title: '分类与标签系统', desc: '实现分类树形结构、标签多对多关联、按分类/标签筛选文章等接口', color: '#39C5BB', icon: I.DataLine },
+    { date: '2026年6月中', title: '评论系统', desc: '支持文章评论、回复、评论分页、最新评论查询、评论数量统计', color: '#12A79C', icon: I.Medal },
+    { date: '2026年6月下', title: '商品与订单模块', desc: '实现商品管理、商品分类、购物车逻辑、订单创建与查询接口', color: '#FF7E9D', icon: I.Trophy },
+    { date: '2026年6月下', title: '图片上传与管理', desc: '基于 multer 实现图片上传、本地存储、缩略图生成、文件管理', color: '#39C5BB', icon: I.Flag },
+    { date: '2026年7月初', title: 'PC 管理端启动', desc: '基于 Vue 3 + Vite + Element Plus 搭建后台管理面板，实现登录页、导航菜单与后台布局', color: '#12A79C', icon: I.DataLine },
+    { date: '2026年7月初', title: '仪表盘与数据统计', desc: '集成 ECharts 图表，实现文章数量、访问量、评论量、用户增长等数据可视化面板', color: '#FF7E9D', icon: I.Trophy },
+    { date: '2026年7月中', title: '文章管理后台', desc: '实现文章列表（搜索、筛选、排序）、富文本编辑器、Markdown 编辑器、封面图上传、草稿箱', color: '#39C5BB', icon: I.Medal },
+    { date: '2026年7月中', title: '分类标签管理后台', desc: '分类的增删改查、拖拽排序；标签的颜色配置、批量操作、使用频次统计', color: '#12A79C', icon: I.Flag },
+    { date: '2026年7月中', title: '用户与评论管理', desc: '用户列表、角色分配、禁用启用；评论审核、批量删除、敏感词过滤', color: '#FF7E9D', icon: I.DataLine },
+    { date: '2026年7月下', title: '商品管理后台', desc: '商品上下架、库存管理、价格设置、商品分类、轮播图管理', color: '#39C5BB', icon: I.Trophy },
+    { date: '2026年7月下', title: '站点设置模块', desc: '网站名称、Logo、SEO 信息、公告管理、关于页信息配置', color: '#12A79C', icon: I.Medal },
+    { date: '2026年8月初', title: '小程序项目启动', desc: '基于 uni-app + Vue3 搭建微信小程序项目，配置 TabBar、路由、请求封装', color: '#FF7E9D', icon: I.Flag },
+    { date: '2026年8月初', title: '首页与文章模块', desc: '实现轮播图、推荐文章、文章列表（分页加载）、文章详情（目录解析、阅读进度、点赞收藏）', color: '#39C5BB', icon: I.DataLine },
+    { date: '2026年8月中', title: '分类与搜索功能', desc: '分类页面（文章/商品分类切换）、标签筛选、全文搜索、搜索历史、热门文章推荐', color: '#12A79C', icon: I.Trophy },
+    { date: '2026年8月中', title: '商城模块开发', desc: '商品列表（分类筛选、价格/销量排序）、商品详情、购物车（增删改查、全选、数量调整）', color: '#FF7E9D', icon: I.Medal },
+    { date: '2026年8月中', title: '订单系统', desc: '订单确认页（地址选择、备注）、订单创建、订单列表（按状态筛选）、删除订单', color: '#39C5BB', icon: I.Flag },
+    { date: '2026年8月下', title: '个人中心', desc: '微信登录授权、浏览历史、我的收藏、消息中心（评论通知、系统通知）、缓存管理', color: '#12A79C', icon: I.DataLine },
+    { date: '2026年8月下', title: '自定义组件开发', desc: '封装 NavBar 导航栏、ArticleCard 文章卡片、LoadMore 加载状态等通用组件', color: '#FF7E9D', icon: I.Trophy },
+    { date: '2026年9月初', title: '全端联调测试', desc: 'PC 管理端、小程序端、后端 API 全链路联调，修复接口兼容性、数据格式不一致等问题', color: '#39C5BB', icon: I.Medal },
+    { date: '2026年9月初', title: '性能优化', desc: '图片懒加载、列表虚拟滚动、API 请求防抖、本地缓存策略、分包加载优化', color: '#12A79C', icon: I.Flag },
+    { date: '2026年9月中', title: 'UI 细节打磨', desc: '统一配色方案（初音青 Miku Teal 主题）、动画过渡效果、空状态设计、错误提示优化', color: '#FF7E9D', icon: I.DataLine },
+    { date: '2026年9月中', title: '安全性加固', desc: 'XSS 防护、SQL 注入防护、接口限流、JWT 过期处理、文件上传类型校验、敏感数据脱敏', color: '#39C5BB', icon: I.Trophy },
+    { date: '2026年9月下', title: '部署与上线', desc: '后端部署至云服务器（Nginx 反向代理 + PM2 进程管理），数据库迁移，小程序提审上线', color: '#12A79C', icon: I.Medal },
+    { date: '2026年9月下', title: '项目完成', desc: '全部功能上线运行，PC 端 + 小程序端 + 后端 API 三端完整交付，持续迭代优化中', color: '#39C5BB', icon: I.Flag },
 ];
 
 const dataCards = reactive([
-    { icon: I.Document, label: '文章总数', value: 0, color: '#667eea', bg: '#eef2ff' },
-    { icon: I.FolderOpened, label: '分类数量', value: 0, color: '#4ECDC4', bg: '#e8faf8' },
-    { icon: I.PriceTag, label: '标签数量', value: 0, color: '#FF6B6B', bg: '#fff0f0' },
-    { icon: I.ChatDotRound, label: '评论总数', value: 0, color: '#F59E0B', bg: '#fffbeb' },
+    { icon: I.Document, label: '文章总数', value: 0, color: '#39C5BB', bg: '#E3F7F4' },
+    { icon: I.FolderOpened, label: '分类数量', value: 0, color: '#12A79C', bg: '#EAF9F8' },
+    { icon: I.PriceTag, label: '标签数量', value: 0, color: '#FF7E9D', bg: '#FFF0F5' },
+    { icon: I.ChatDotRound, label: '评论总数', value: 0, color: '#39C5BB', bg: '#E3F7F4' },
 ]);
 
 const contacts = [
-    { icon: I.Message, label: '电子邮箱', value: 'svip888ws@foxmail.com', color: '#667eea', bg: '#eef2ff' },
-    { icon: I.Link, label: 'QQ', value: '2517441744', color: '#333', bg: '#f5f5f5' },
-    { icon: I.ChatLineRound, label: '微信', value: '13080983262', color: '#4ECDC4', bg: '#e8faf8' },
+    { icon: I.Message, label: '电子邮箱', value: 'canada.svip@gmail.com', link: 'mailto:canada.svip@gmail.com', color: '#39C5BB', bg: '#E3F7F4' },
+    { icon: I.Link, label: 'Bilibili 哔哩哔哩', value: '早八联盟的个人空间', link: 'https://space.bilibili.com/1772424360?spm_id_from=333.1007.0.0', color: '#12A79C', bg: '#EAF9F8' },
+    { icon: I.ChatLineRound, label: '微信', value: 'svip888ws', color: '#FF7E9D', bg: '#FFF0F5' },
 ];
+
+const handleContactClick = (c) => {
+    if (c.link) {
+        if (c.link.startsWith('mailto:')) {
+            const email = c.link.replace(/^mailto:/, '');
+            if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(email).catch(() => {});
+            }
+            window.location.href = c.link;
+            ElMessage.success(`正在唤起邮件客户端，已复制邮箱：${email}`);
+            return;
+        }
+        window.open(c.link, '_blank');
+    } else if (c.value) {
+        try {
+            navigator.clipboard.writeText(c.value);
+            ElMessage.success(`已复制 ${c.label}：${c.value}`);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+};
 
 /* ========== 事件处理 ========== */
 const onMouseMove = (e) => {
@@ -407,25 +486,37 @@ const animateNumber = (refVal, target, duration = 1500) => {
 /* ========== 数据请求 ========== */
 const fetchData = async () => {
     try {
-        const [a, ar, t, c, cm] = await Promise.all([
+        const [a] = await Promise.all([
             getAdminInfo(),
-            request.get('/article', { params: { pageSize: 1 } }),
-            request.get('/tag'),
-            request.get('/category'),
-            request.get('/comment/latest', { params: { limit: 100 } }),
+            statsStore.fetchStats(),
         ]);
         admin.value = a.data;
-        const ac = ar.data.total || 0, tc = t.data.length || 0, cc = c.data.length || 0, cmc = cm.data.length || 0;
-        Object.assign(dataCards[0], { value: ac });
-        Object.assign(dataCards[1], { value: cc });
-        Object.assign(dataCards[2], { value: tc });
-        Object.assign(dataCards[3], { value: cmc });
-        animateNumber(articleCount, ac);
-        animateNumber(tagCount, tc);
-        animateNumber(categoryCount, cc);
-        animateNumber(commentCount, cmc);
+        // 数据卡片与 heroStats 一次性数字动画
+        Object.assign(dataCards[0], { value: statsStore.stats.articles || 0 });
+        Object.assign(dataCards[1], { value: statsStore.stats.categories || 0 });
+        Object.assign(dataCards[2], { value: statsStore.stats.tags || 0 });
+        Object.assign(dataCards[3], { value: statsStore.stats.comments || 0 });
+        animateNumber(articleCount, statsStore.stats.articles || 0);
+        animateNumber(tagCount, statsStore.stats.tags || 0);
+        animateNumber(categoryCount, statsStore.stats.categories || 0);
+        animateNumber(commentCount, statsStore.stats.comments || 0);
     } catch (e) { console.error('获取数据失败:', e); }
 };
+
+// 后续轮询：静默更新本地值（无动画），dataCards 同步刷新
+watch(
+    () => ({ ...statsStore.stats }),
+    (cur) => {
+        Object.assign(dataCards[0], { value: cur.articles || 0 });
+        Object.assign(dataCards[1], { value: cur.categories || 0 });
+        Object.assign(dataCards[2], { value: cur.tags || 0 });
+        Object.assign(dataCards[3], { value: cur.comments || 0 });
+        articleCount.value = cur.articles || 0;
+        tagCount.value = cur.tags || 0;
+        categoryCount.value = cur.categories || 0;
+        commentCount.value = cur.comments || 0;
+    },
+);
 
 /* ========== 滚动揭示 ========== */
 let observer = null;
@@ -454,32 +545,26 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
    Variables
    ============================================================ */
 .about-page {
-    --primary: #667eea;
-    --purple: #764ba2;
-    --teal: #4ECDC4;
-    --red: #FF6B6B;
-    --amber: #F59E0B;
-    --pink: #F472B6;
-    --violet: #A78BFA;
-    --heading: #1a1a2e;
-    --text: #555;
-    --muted: #999;
-    --card: #fff;
-    --border: rgba(0, 0, 0, 0.04);
+    --primary: #39C5BB;
+    --purple: #12A79C;
+    --teal: #39C5BB;
+    --red: #FF7E9D;
+    --amber: #FFB3C6;
+    --pink: #FF7E9D;
+    --violet: #12A79C;
+    --heading: #14322F;
+    --text: #3D5A57;
+    --muted: #8BA8A5;
+    --card: #ffffff;
+    --border: rgba(57, 197, 187, 0.25);
     --max-w: 1100px;
     --r: 16px;
     --r-sm: 14px;
     --r-lg: 20px;
 
-    background: #f5f6f8;
+    background: #EAF9F8;
     cursor: auto;
     overflow-x: hidden;
-}
-
-@media (min-width: 768px) {
-    .about-page {
-        cursor: none;
-    }
 }
 
 .muted {
@@ -488,27 +573,6 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     margin: 5px 0;
 }
 
-/* ============================================================
-   Cursor Glow
-   ============================================================ */
-.cursor-glow {
-    position: fixed;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 9999;
-    transform: translate(-50%, -50%);
-    transition: left 0.1s ease-out, top 0.1s ease-out;
-    display: none;
-}
-
-@media (min-width: 768px) {
-    .cursor-glow {
-        display: block;
-    }
-}
 
 /* ============================================================
    Hero Section
@@ -520,7 +584,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: #cac2d6;
+    background: linear-gradient(135deg, #EAF9F8 0%, #E3F7F4 50%, #EAF9F8 100%);
 }
 
 .hero-bg {
@@ -532,17 +596,17 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse at 25% 40%, rgba(102, 126, 234, 0.2) 0%, transparent 55%),
-        radial-gradient(ellipse at 75% 30%, rgba(167, 139, 250, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 80%, rgba(244, 114, 182, 0.12) 0%, transparent 50%);
+        radial-gradient(ellipse at 25% 40%, rgba(57, 197, 187, 0.25) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 30%, rgba(255, 126, 157, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(18, 167, 156, 0.15) 0%, transparent 50%);
 }
 
 .hero-grid {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        linear-gradient(rgba(57, 197, 187, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(57, 197, 187, 0.08) 1px, transparent 1px);
     background-size: 60px 60px;
 }
 
@@ -632,7 +696,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 /* Particles */
 .hero-particles .particle {
     position: absolute;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(57, 197, 187, 0.4);
     border-radius: 50%;
     animation: particleDrift linear infinite;
 }
@@ -675,7 +739,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .shape {
     position: absolute;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(57, 197, 187, 0.15);
     animation: shapeFloat linear infinite;
 }
 
@@ -704,7 +768,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     top: 60%;
     left: 20%;
     animation-duration: 18s;
-    border-color: rgba(102, 126, 234, 0.08);
+    border-color: rgba(57, 197, 187, 0.2);
 }
 
 .shape-4 {
@@ -714,7 +778,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     top: 25%;
     right: 15%;
     animation-duration: 22s;
-    border-color: rgba(244, 114, 182, 0.06);
+    border-color: rgba(255, 126, 157, 0.2);
 }
 
 .shape-5 {
@@ -762,14 +826,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     align-items: center;
     gap: 8px;
     padding: 6px 20px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(57, 197, 187, 0.15);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.7);
+    border: none;
+    color: #12A79C;
     font-size: 11px;
     font-weight: 800;
     border-radius: 30px;
-    letter-spacing: 4px;
+    letter-spacing: 3px;
     margin-bottom: 28px;
     animation: fadeInDown 0.8s ease both, badgeFloat 4s ease-in-out 1s infinite;
 }
@@ -789,14 +853,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 .hero-title {
     font-size: clamp(32px, 6vw, 56px);
     font-weight: 900;
-    color: #fff;
+    color: #14322F;
     margin: 0 0 16px;
     line-height: 1.3;
     animation: fadeInUp 0.8s ease 0.15s both;
 }
 
 .gradient-text {
-    background: linear-gradient(135deg, var(--primary), var(--violet), var(--pink), var(--primary));
+    background: linear-gradient(135deg, #39C5BB, #12A79C, #FF7E9D, #39C5BB);
     background-size: 300% 300%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -818,7 +882,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .hero-subtitle {
     font-size: clamp(14px, 2vw, 17px);
-    color: rgba(255, 255, 255, 0.45);
+    color: #5B7A75;
     margin: 0 auto 36px;
     max-width: 520px;
     line-height: 1.7;
@@ -827,7 +891,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 }
 
 .typing-cursor {
-    color: rgba(255, 255, 255, 0.6);
+    color: #12A79C;
     animation: blink 0.8s ease infinite;
     font-weight: 300;
 }
@@ -868,16 +932,18 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     align-items: center;
     gap: 8px;
     padding: 16px 8px;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(57, 197, 187, 0.3);
     border-radius: var(--r);
     transition: all 0.3s;
 }
 
 .stat-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
+    background: #ffffff;
+    border-color: #39C5BB;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(57, 197, 187, 0.18);
 }
 
 .stat-ring {
@@ -901,79 +967,19 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.7);
+    color: #12A79C;
 }
 
 .stat-num {
     font-size: 22px;
     font-weight: 900;
-    color: #fff;
+    color: #14322F;
     line-height: 1;
 }
 
 .stat-label {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-/* Scroll Hint */
-.scroll-hint {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255, 255, 255, 0.25);
-    font-size: 10px;
-    letter-spacing: 3px;
-    animation: scrollBounce 2.5s ease-in-out infinite;
-}
-
-.scroll-mouse {
-    width: 20px;
-    height: 30px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    padding-top: 6px;
-}
-
-.scroll-dot {
-    width: 3px;
-    height: 7px;
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 2px;
-    animation: scrollDot 1.5s ease-in-out infinite;
-}
-
-@keyframes scrollDot {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    50% {
-        opacity: 0.2;
-        transform: translateY(7px);
-    }
-}
-
-@keyframes scrollBounce {
-
-    0%,
-    100% {
-        transform: translateX(-50%) translateY(0);
-    }
-
-    50% {
-        transform: translateX(-50%) translateY(-6px);
-    }
+    color: #8BA8A5;
 }
 
 @keyframes fadeInDown {
@@ -1039,14 +1045,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 .section-tag {
     display: inline-block;
     padding: 4px 16px;
-    background: linear-gradient(135deg, #8d9ff1, var(--purple));
+    background: linear-gradient(135deg, #39C5BB, #12A79C);
     color: #fff;
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 3px;
     border-radius: 20px;
     margin-bottom: 14px;
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 0 20px rgba(57, 197, 187, 0.3);
     animation: tagGlow 3s ease-in-out infinite;
 }
 
@@ -1054,11 +1060,11 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
     0%,
     100% {
-        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 0 20px rgba(57, 197, 187, 0.3);
     }
 
     50% {
-        box-shadow: 0 0 30px rgba(102, 126, 234, 0.5), 0 0 60px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 0 30px rgba(57, 197, 187, 0.5), 0 0 60px rgba(57, 197, 187, 0.2);
     }
 }
 
@@ -1135,7 +1141,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
    About Section
    ============================================================ */
 .sec-about {
-    background: #f0f6ef;
+    background: #EAF9F8;
 }
 
 .about-grid {
@@ -1155,9 +1161,10 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 .about-sidebar {
     text-align: center;
     padding: 32px 20px;
-    background: #e2e7f7;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: var(--r-lg);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(57, 197, 187, 0.3);
+    box-shadow: 0 8px 30px rgba(57, 197, 187, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -1176,7 +1183,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     display: inline-block;
     padding: 5px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--purple));
+    background: linear-gradient(135deg, #39C5BB, #12A79C);
     position: relative;
     overflow: hidden;
 }
@@ -1185,9 +1192,9 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     position: absolute;
     inset: -2px;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, var(--primary), var(--pink), var(--teal), var(--primary));
+    background: conic-gradient(from 0deg, #39C5BB, #FF7E9D, #12A79C, #39C5BB);
     animation: spin 3s linear infinite;
-    opacity: 0.6;
+    opacity: 0.8;
 }
 
 @keyframes spin {
@@ -1197,8 +1204,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 }
 
 .about-avatar {
-    background: #ff8484;
-    color: var(--primary);
+    background: #EAF9F8;
+    color: #12A79C;
     font-size: 42px;
     font-weight: 900;
     position: relative;
@@ -1223,30 +1230,32 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    background: rgba(165, 156, 209, 0.2);
+    background: rgba(57, 197, 187, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #666;
+    color: #12A79C;
     cursor: pointer;
-    border: 1px solid #f0f0f0;
+    border: none;
+    box-shadow: 0 4px 12px rgba(57, 197, 187, 0.12);
     text-decoration: none;
     transition: all 0.3s;
 }
 
 .social-btn:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-    color: var(--primary);
-    border-color: var(--primary);
+    box-shadow: 0 6px 16px rgba(57, 197, 187, 0.28);
+    color: #ffffff;
+    background: #39C5BB;
 }
 
 .about-text {
     padding: 24px;
-    background: #fafbff;
+    background: #ffffff;
     border-radius: var(--r-lg);
-    border: 1px solid var(--border);
+    border: none;
     margin-bottom: 18px;
+    box-shadow: 0 8px 26px rgba(57, 197, 187, 0.10);
 }
 
 @media (min-width: 768px) {
@@ -1288,13 +1297,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    background: #fafbff;
+    background: #ffffff;
     border-radius: var(--r-sm);
-    border: 1px solid var(--border);
+    border: none;
+    box-shadow: 0 4px 14px rgba(57, 197, 187, 0.08);
 }
 
 .highlight-card:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 22px rgba(57, 197, 187, 0.16);
 }
 
 .hl-glow {
@@ -1326,6 +1336,10 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 /* ============================================================
    Tech Section
    ============================================================ */
+.sec-tech {
+    background: #EAF9F8;
+}
+
 .tech-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1351,7 +1365,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     border-radius: var(--r);
     padding: 20px 16px;
     text-align: center;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(57, 197, 187, 0.25);
+    transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {
@@ -1361,7 +1376,9 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 }
 
 .tech-card:hover {
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 30px rgba(57, 197, 187, 0.15);
+    border-color: #39C5BB;
+    transform: translateY(-3px);
 }
 
 .tech-card .icon-box {
@@ -1381,7 +1398,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .bar {
     height: 4px;
-    background: #f0f0f0;
+    background: #EAF9F8;
     border-radius: 2px;
     overflow: hidden;
     margin-bottom: 6px;
@@ -1396,14 +1413,14 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 .tech-level {
     font-size: 11px;
     font-weight: 700;
-    color: #bbb;
+    color: #8BA8A5;
 }
 
 /* ============================================================
    Timeline Section
    ============================================================ */
 .sec-timeline {
-    background: #fff;
+    background: #EAF9F8;
 }
 
 .timeline {
@@ -1417,7 +1434,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     top: 0;
     bottom: 0;
     width: 2px;
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(57, 197, 187, 0.2);
     overflow: hidden;
 }
 
@@ -1434,7 +1451,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, transparent, var(--primary), var(--teal), var(--red), transparent);
+    background: linear-gradient(180deg, transparent, #39C5BB, #FF7E9D, #12A79C, transparent);
     animation: trackGlow 4s ease-in-out infinite;
 }
 
@@ -1486,7 +1503,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     align-items: center;
     justify-content: center;
     border: 3px solid #fff;
-    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 0 3px rgba(57, 197, 187, 0.2);
     z-index: 2;
 }
 
@@ -1524,13 +1541,15 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .tl-card {
     padding: 18px 20px;
-    background: #fafbff;
+    background: #ffffff;
     border-radius: var(--r-sm);
-    border: 1px solid var(--border);
+    border: none;
+    box-shadow: 0 4px 16px rgba(57, 197, 187, 0.08);
+    transition: all 0.3s ease;
 }
 
 .tl-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 26px rgba(57, 197, 187, 0.16);
 }
 
 .tl-date {
@@ -1547,7 +1566,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .tl-card p {
     font-size: 13px;
-    color: #666;
+    color: #5B7A75;
     margin: 0;
     line-height: 1.6;
 }
@@ -1555,6 +1574,10 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 /* ============================================================
    Data Section
    ============================================================ */
+.sec-data {
+    background: #EAF9F8;
+}
+
 .data-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1573,26 +1596,17 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
     padding: 28px 16px;
     background: var(--card);
     border-radius: 18px;
-    border: 1px solid var(--border);
+    border: none;
+    box-shadow: 0 6px 20px rgba(57, 197, 187, 0.08);
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {
     .data-card {
         padding: 32px 20px;
     }
-}
-
-/* Accent top bar */
-.data-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent), white 30%));
 }
 
 /* Hover glow border */
@@ -1630,13 +1644,13 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .data-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 14px 32px rgba(57, 197, 187, 0.18);
 }
 
 .data-num {
     font-size: clamp(32px, 5vw, 42px);
     font-weight: 900;
-    background: linear-gradient(135deg, var(--primary), var(--purple));
+    background: linear-gradient(135deg, #39C5BB, #12A79C);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1653,7 +1667,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
    Contact Section
    ============================================================ */
 .sec-contact {
-    background: #fff;
+    background: #EAF9F8;
 }
 
 .contact-grid {
@@ -1672,9 +1686,11 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 .contact-card {
     text-align: center;
     padding: 28px 16px;
-    background: #fafbff;
+    background: #ffffff;
     border-radius: 18px;
-    border: 1px solid var(--border);
+    border: none;
+    box-shadow: 0 6px 20px rgba(57, 197, 187, 0.08);
+    transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {
@@ -1684,7 +1700,8 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 }
 
 .contact-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 28px rgba(57, 197, 187, 0.16);
+    transform: translateY(-3px);
 }
 
 .contact-card h4 {
@@ -1696,27 +1713,7 @@ onUnmounted(() => { observer?.disconnect(); clearTimeout(typeTimer); });
 
 .contact-card p {
     font-size: 13px;
-    color: #666;
+    color: #5B7A75;
     margin: 0;
-}
-
-/* ============================================================
-   Scrollbar
-   ============================================================ */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(102, 126, 234, 0.3);
-    border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(102, 126, 234, 0.5);
 }
 </style>

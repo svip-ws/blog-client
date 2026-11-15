@@ -60,6 +60,11 @@ export const getLikeStatus = (articleId) => {
   return request.get(`/article/${articleId}/like`);
 };
 
+// 获取单篇文章轻量统计（view/like/comment 计数），供文章详情页实时轮询刷新
+export const getArticleStats = (articleId) => {
+  return request.get(`/article/${articleId}/stats`);
+};
+
 // 获取推荐文章
 export function getRecommendArticles(limit = 5) {
   return request({

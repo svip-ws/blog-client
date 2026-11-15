@@ -1,10 +1,12 @@
 <template>
     <div class="tab-bar">
-        <div v-for="tab in tabs" :key="tab.path" class="tab-item" :class="{ active: isActive(tab.path) }"
+        <div v-for="tab in tabs" :key="tab.path" class="tab-item tactile-btn" :class="{ active: isNavActive(tab.path, route.path) }"
             @click="goTo(tab.path)">
-            <el-icon class="tab-icon">
-                <component :is="tab.icon" />
-            </el-icon>
+            <div class="tab-icon-wrap">
+                <el-icon class="tab-icon">
+                    <component :is="tab.icon" />
+                </el-icon>
+            </div>
             <span class="tab-label">{{ tab.label }}</span>
         </div>
     </div>
@@ -12,22 +14,19 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router';
-import { HomeFilled, ChatLineSquare, ShoppingBag, User } from '@element-plus/icons-vue';
+import { HomeFilled, Document, VideoCamera, Camera, User } from '@element-plus/icons-vue';
+import { isNavActive } from '../utils/navActive';
 
 const route = useRoute();
 const router = useRouter();
 
 const tabs = [
     { path: '/', label: '首页', icon: HomeFilled },
-    { path: '/messages', label: '留言墙', icon: ChatLineSquare },
-    { path: '/products', label: '周边', icon: ShoppingBag },
+    { path: '/articles', label: '文章', icon: Document },
+    { path: '/messages', label: '留言墙', icon: VideoCamera },
+    { path: '/snapshots', label: '随拍', icon: Camera },
     { path: '/profile', label: '我的', icon: User }
 ];
-
-const isActive = (path) => {
-    if (path === '/') return route.path === '/';
-    return route.path.startsWith(path);
-};
 
 const goTo = (path) => {
     router.push(path);
@@ -42,16 +41,15 @@ const goTo = (path) => {
     right: 0;
     z-index: 999;
     display: none;
-    height: 56px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04);
+    height: 60px;
+    /* 性能：去掉 backdrop-filter（fixed 底栏在滚动时逐帧重模糊）背景已高不透明，视觉不变 */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(235, 248, 246, 0.97) 100%);
+    border-top: 1px solid rgba(57, 197, 187, 0.32);
+    box-shadow: 0 -6px 24px rgba(8, 90, 87, 0.12);
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .tab-bar {
         display: flex;
         align-items: center;
@@ -64,34 +62,50 @@ const goTo = (path) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     cursor: pointer;
-    padding: 6px 0;
-    min-width: 56px;
-    transition: all 0.2s;
+    padding: 6px 14px;
+    min-width: 58px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     -webkit-tap-highlight-color: transparent;
+    border-radius: var(--radius-pill, 9999px);
+}
+
+.tab-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.25s ease;
 }
 
 .tab-icon {
-    font-size: 22px;
-    color: #999;
-    transition: all 0.2s;
+    font-size: 19px;
+    color: #5C837F;
+    transition: all 0.25s ease;
 }
 
 .tab-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: #999;
-    transition: all 0.2s;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #5C837F;
+    transition: all 0.25s ease;
+}
+
+.tab-item.active .tab-icon-wrap {
+    background: rgba(57, 197, 187, 0.2);
+    box-shadow: 0 0 12px rgba(57, 197, 187, 0.35);
 }
 
 .tab-item.active .tab-icon {
-    color: #1a1a2e;
-    transform: scale(1.1);
+    color: #12A79C;
+    transform: scale(1.12);
 }
 
 .tab-item.active .tab-label {
-    color: #1a1a2e;
-    font-weight: 700;
+    color: #12A79C;
+    font-weight: 800;
 }
 </style>

@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html lang="">
-  <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初音小站 · 二次元全栈与 AI 音乐灵感空间</title>
+  <meta name="description" content="初音小站 - 沉浸式二次元学园科技博客，记录前端工程、Node全栈、初音 AI 探索与二次元音乐灵感。">
+  <link rel="preload" as="style" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <!-- 首屏核心视觉资源高优预加载 (LCP & Brand Preload) -->
+  <link rel="preload" as="image" href="/images/miku/miku_wp_1.jpg" fetchpriority="high">
+  <link rel="prefetch" as="image" href="/images/miku/miku_chibi_main.png">
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>

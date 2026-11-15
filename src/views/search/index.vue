@@ -1,95 +1,127 @@
 <template>
     <div class="search-page">
-        <!-- Hero（全宽） -->
+        <!-- 初音赛博 Hero 检索头部 -->
         <div class="search-hero">
-            <div class="hero-bg">
-                <div class="hero-orb orb-1"></div>
-                <div class="hero-orb orb-2"></div>
-                <div class="hero-orb orb-3"></div>
-                <div class="hero-grid"></div>
+            <div class="hero-miku-bg-wrap" aria-hidden="true">
+                <img src="/images/miku/miku_wp_8.jpg" alt="Miku Search Background" class="hero-miku-bg-img" />
+                <div class="hero-scrim-overlay"></div>
+                <div class="hero-orb orb-cyan"></div>
+                <div class="hero-orb orb-teal"></div>
+                <div class="hero-orb orb-blue"></div>
             </div>
+
             <div class="hero-content">
-                <div class="hero-badge">
-                    <el-icon>
-                        <Search />
-                    </el-icon>
-                    SEARCH
+                <h1 class="hero-title">全站检索</h1>
+                <p class="hero-sub">搜索站内技术文章、学习笔记与关键词标签</p>
+
+                <!-- 赛博胶囊搜索框 (无红色) -->
+                <div class="search-bar-container">
+                    <div class="miku-search-capsule">
+                        <el-input
+                            v-model="keyword"
+                            size="large"
+                            placeholder="搜索初音音律、知识档案、标签话题... ♪"
+                            clearable
+                            @keyup.enter="doSearch"
+                            @clear="keyword = ''"
+                        >
+                            <template #prefix>
+                                <el-icon class="search-input-icon"><Search /></el-icon>
+                            </template>
+                            <template #append>
+                                <button class="miku-search-submit-btn tactile-btn shine-effect" @click="doSearch" :disabled="loading">
+                                    <el-icon v-if="!loading"><Search /></el-icon>
+                                    <el-icon v-else class="is-loading"><Loading /></el-icon>
+                                    <span>{{ loading ? '检索中...' : '检索' }}</span>
+                                </button>
+                            </template>
+                        </el-input>
+                    </div>
+
+                    <!-- 快捷标签推荐 (初音热搜) -->
+                    <div class="hero-hot-tags">
+                        <span class="hot-label">🎵 热热搜话题：</span>
+                        <span
+                            v-for="tag in hotTags"
+                            :key="tag"
+                            class="miku-hot-tag-chip"
+                            @click="quickSearch(tag)"
+                        >
+                            {{ tag }}
+                        </span>
+                    </div>
+
+                    <p class="search-summary" v-if="searched">
+                        共找到 <strong>{{ articleList.length }}</strong> 篇关于「<span class="kw-text">{{ searchedKeyword }}</span>」的档案记录
+                    </p>
                 </div>
-                <h1 class="hero-title">搜索</h1>
-                <div class="search-bar">
-                    <el-input v-model="keyword" size="large" placeholder="输入关键词搜索文章..." clearable
-                        @keyup.enter="doSearch" @clear="keyword = ''">
-                        <template #prefix>
-                            <el-icon>
-                                <Search />
-                            </el-icon>
-                        </template>
-                        <template #append>
-                            <el-button @click="doSearch" :loading="loading">搜索</el-button>
-                        </template>
-                    </el-input>
-                </div>
-                <p class="search-summary" v-if="searched">
-                    共找到 <strong>{{ articleList.length }}</strong> 篇关于「{{ searchedKeyword }}」的文章
-                </p>
             </div>
         </div>
 
-        <!-- 搜索结果 -->
+        <!-- 搜索结果列表区 -->
         <div class="results-section" v-loading="loading">
-            <div v-for="(article, index) in articleList" :key="article.id" class="article-card"
-                :class="'theme-' + (index % 4)" :style="{ animationDelay: index * 0.06 + 's' }"
-                @click="goToDetail(article.id)">
-                <div class="card-top-accent"></div>
-                <div class="card-cover" v-if="article.cover">
-                    <el-image :src="article.cover" fit="cover" class="cover-img">
-                        <template #error>
-                            <div class="cover-fallback">
-                                <el-icon :size="28">
-                                    <Picture />
-                                </el-icon>
-                            </div>
-                        </template>
-                    </el-image>
+            <div
+                v-for="(article, index) in articleList"
+                :key="article.id"
+                v-holo
+                class="miku-article-card glass-miku-card"
+                :style="{ animationDelay: index * 0.05 + 's' }"
+                @click="goToDetail(article.id)"
+            >
+                <div class="card-top-miku-line"></div>
+                
+                <div class="card-cover">
+                    <img :src="getArticleCover(article, index)" class="cover-img" @error="onCoverError(article.id)" />
                 </div>
+
                 <div class="card-content">
                     <div class="card-header">
-                        <div class="card-index">{{ String(index + 1).padStart(2, '0') }}</div>
+                        <span class="miku-card-index">#{{ String(index + 1).padStart(2, '0') }}</span>
                         <span class="card-category" v-if="article.category_name">{{ article.category_name }}</span>
                         <span class="card-time">{{ formatTime(article.create_time) }}</span>
                     </div>
+
                     <h3 class="card-title">
                         <span v-html="highlightKeyword(article.title)"></span>
                     </h3>
+
                     <p class="card-desc" v-if="article.description">
                         <span v-html="highlightKeyword(article.description)"></span>
                     </p>
+
                     <div class="card-footer">
                         <div class="card-author">
-                            <div class="author-avatar">{{ article.author_name?.charAt(0) }}</div>
+                            <div class="miku-author-avatar-ring">
+                                <div class="author-avatar">{{ article.author_name?.charAt(0) || '初' }}</div>
+                            </div>
                             <span>{{ article.author_name }}</span>
                         </div>
+
                         <div class="card-tags" v-if="article.tag_names && article.tag_names.length">
-                            <el-tag v-for="(name, i) in article.tag_names.slice(0, 3)" :key="i" size="small"
-                                effect="plain" round>{{ name }}</el-tag>
+                            <span v-for="(name, i) in article.tag_names.slice(0, 3)" :key="i" class="miku-tag-pill">
+                                {{ name }}
+                            </span>
                         </div>
+
                         <span class="meta-item">
-                            <el-icon :size="13">
-                                <View />
-                            </el-icon>
+                            <el-icon :size="13"><View /></el-icon>
                             {{ article.view_count }}
                         </span>
                     </div>
                 </div>
             </div>
 
-            <el-empty v-if="!loading && searched && articleList.length === 0" description="没有找到相关文章，换个关键词试试？" />
+            <!-- 空状态 -->
+            <div class="miku-empty-box glass-miku-card" v-if="!loading && searched && articleList.length === 0">
+                <div class="empty-icon-ring">🎵</div>
+                <h3 class="empty-title">未找到相关初音档案</h3>
+                <p class="empty-sub">没有检索到与「{{ searchedKeyword }}」相关的文章，试着更换关键词吧 ♪</p>
+            </div>
 
-            <div class="search-placeholder" v-if="!searched && !loading">
-                <el-icon :size="64" color="#ddd">
-                    <Search />
-                </el-icon>
-                <p>输入关键词，搜索你感兴趣的内容</p>
+            <!-- 初始占位提示 -->
+            <div class="miku-placeholder-box glass-miku-card" v-if="!searched && !loading">
+                <div class="miku-pulse-icon">♪</div>
+                <p class="placeholder-text">输入关键词，解锁初音未来知识库与音律笔记</p>
             </div>
         </div>
     </div>
@@ -100,7 +132,9 @@ import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { searchArticles } from '../../api/article';
 import { formatTime } from '../../utils/format';
-import { Search, View, Picture } from '@element-plus/icons-vue';
+import { escapeHtml } from '../../utils/sanitize';
+import { Search, View, Picture, Loading } from '@element-plus/icons-vue';
+import { getMikuWallpaper } from '../../utils/mikuImage';
 
 const route = useRoute();
 const router = useRouter();
@@ -109,6 +143,24 @@ const keyword = ref('');
 const searchedKeyword = ref('');
 const searched = ref(false);
 const articleList = ref([]);
+
+const brokenCovers = ref([]);
+const onCoverError = (id) => {
+    if (!brokenCovers.value.includes(id)) brokenCovers.value = [...brokenCovers.value, id];
+};
+const getArticleCover = (article, index) => {
+    if (article && article.cover_url && !brokenCovers.value.includes(article.id)) {
+        return article.cover_url;
+    }
+    return getMikuWallpaper(article?.id || index);
+};
+
+const hotTags = ['初音未来', 'VOCALOID', '千本樱', '电子歌姬', '音乐创作', '美学笔记'];
+
+const quickSearch = (tag) => {
+    keyword.value = tag;
+    doSearch();
+};
 
 const doSearch = async () => {
     if (!keyword.value.trim()) return;
@@ -128,10 +180,16 @@ const doSearch = async () => {
 };
 
 const highlightKeyword = (text) => {
-    if (!text || !searchedKeyword.value) return text;
+    if (!text || !searchedKeyword.value) return escapeHtml(text);
     const escaped = searchedKeyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escaped})`, 'gi');
-    return text.replace(regex, '<span class="highlight">$1</span>');
+    return text
+        .split(new RegExp(`(${escaped})`, 'gi'))
+        .map((part, i) =>
+            i % 2 === 1
+                ? `<span class="miku-highlight">${escapeHtml(part)}</span>`
+                : escapeHtml(part)
+        )
+        .join('');
 };
 
 const goToDetail = (id) => { router.push(`/article/${id}`); };
@@ -148,311 +206,284 @@ watch(() => route.query.keyword, (newVal) => {
 
 <style scoped>
 .search-page {
-    background: #f5f6f8;
+    background: transparent;
     min-height: 100vh;
 }
 
-/* ==================== Hero（全宽） ==================== */
+/* ==================== 初音赛博 Search Hero ==================== */
 .search-hero {
     position: relative;
-    padding: 50px 20px;
+    padding: calc(var(--navbar-clearance) + 20px) 20px 60px;
     text-align: center;
     overflow: hidden;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 40%, #fdf2f8 100%);
+    isolation: isolate;
+    border-bottom: 1.5px solid rgba(57, 197, 187, 0.35);
 }
 
-@media (min-width: 768px) {
-    .search-hero {
-        padding: 60px 20px;
-    }
-}
-
-.hero-bg {
+.hero-miku-bg-wrap {
     position: absolute;
     inset: 0;
+    overflow: hidden;
+    z-index: 0;
 }
 
-.hero-grid {
+.hero-miku-bg-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.22;
+    filter: blur(4px) saturate(1.2);
+    transition: all 0.6s ease;
+}
+
+.search-hero:hover .hero-miku-bg-img {
+    opacity: 0.42;
+    filter: blur(0px) brightness(1.05) saturate(1.25);
+}
+
+.hero-scrim-overlay {
     position: absolute;
     inset: 0;
-    background-image:
-        linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background: linear-gradient(180deg, rgba(14, 34, 32, 0.78) 0%, rgba(10, 26, 25, 0.92) 100%);
 }
 
 .hero-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(70px);
+    filter: blur(80px);
     opacity: 0.5;
+    pointer-events: none;
 }
 
-.orb-1 {
-    width: 160px;
-    height: 160px;
-    background: #A78BFA;
-    top: -40px;
-    left: 10%;
-    animation: orbDrift 8s ease-in-out infinite;
+.orb-cyan {
+    width: 220px;
+    height: 220px;
+    background: #39C5BB;
+    top: -50px;
+    left: 15%;
 }
 
-.orb-2 {
-    width: 130px;
-    height: 130px;
-    background: #7C3AED;
-    bottom: -30px;
-    right: 10%;
-    animation: orbDrift 10s ease-in-out infinite reverse;
+.orb-teal {
+    width: 180px;
+    height: 180px;
+    background: #12A79C;
+    bottom: -40px;
+    right: 15%;
 }
 
-.orb-3 {
-    width: 90px;
-    height: 90px;
-    background: #F472B6;
-    top: 20%;
-    right: 20%;
-    animation: orbDrift 9s ease-in-out infinite 2s;
-}
-
-@media (min-width: 768px) {
-    .orb-1 {
-        width: 200px;
-        height: 200px;
-        top: -50px;
-    }
-
-    .orb-2 {
-        width: 160px;
-        height: 160px;
-        bottom: -40px;
-    }
-
-    .orb-3 {
-        width: 120px;
-        height: 120px;
-    }
-}
-
-@keyframes orbDrift {
-
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-
-    33% {
-        transform: translate(20px, -15px) scale(1.05);
-    }
-
-    66% {
-        transform: translate(-15px, 10px) scale(0.95);
-    }
+.orb-blue {
+    width: 140px;
+    height: 140px;
+    background: #0B7A73;
+    top: 30%;
+    right: 30%;
 }
 
 .hero-content {
     position: relative;
     z-index: 2;
+    max-width: 760px;
+    margin: 0 auto;
 }
 
-.hero-badge {
+.miku-hud-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 18px;
-    background: linear-gradient(135deg, #A78BFA, #7C3AED);
-    color: #fff;
+    gap: 8px;
+    padding: 6px 18px;
+    background: rgba(18, 42, 40, 0.65);
+    border: none;
+    color: #39C5BB;
     font-size: 11px;
     font-weight: 800;
-    border-radius: 20px;
-    letter-spacing: 3px;
-    margin-bottom: 16px;
+    border-radius: 9999px;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(57, 197, 187, 0.25);
+    backdrop-filter: blur(12px);
+}
+
+.hud-tag {
+    background: linear-gradient(135deg, #0B7A73, #08635D);
+    color: #FFFFFF;
+    font-family: monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 9999px;
 }
 
 .hero-title {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 900;
-    color: #1a1a2e;
-    margin: 0 0 20px;
+    margin: 0 0 6px;
+    color: #FFFFFF;
+    letter-spacing: 1px;
+    text-shadow: 0 4px 18px rgba(57, 197, 187, 0.4);
 }
 
-@media (min-width: 768px) {
-    .hero-title {
-        font-size: 34px;
-    }
+.hero-sub {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 800;
+    color: #39C5BB;
+    letter-spacing: 2.5px;
+    margin: 0 0 28px;
 }
 
-/* 搜索框 */
-.search-bar {
-    max-width: 560px;
-    margin: 0 auto 16px;
+/* 赛博胶囊搜索框 */
+.search-bar-container {
+    max-width: 620px;
+    margin: 0 auto;
 }
 
-.search-bar :deep(.el-input__wrapper) {
-    border-radius: 14px;
-    padding: 4px 8px;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    transition: all 0.3s;
-}
-
-.search-bar :deep(.el-input__wrapper:focus-within) {
-    box-shadow: 0 4px 24px rgba(167, 139, 250, 0.15);
-    border-color: rgba(167, 139, 250, 0.3);
-}
-
-.search-bar :deep(.el-input-group__append) {
-    border-radius: 0 14px 14px 0;
-    background: linear-gradient(135deg, #A78BFA, #7C3AED);
-    color: #fff;
+.miku-search-capsule :deep(.el-input__wrapper) {
+    border-radius: 40px 0 0 40px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.95);
     border: none;
-    box-shadow: none;
+    box-shadow: 0 6px 24px rgba(8, 90, 87, 0.14);
+    transition: all 0.3s ease;
 }
 
-.search-bar :deep(.el-input-group__append .el-button) {
-    color: #fff;
-    font-weight: 600;
-    border: none;
+.miku-search-capsule :deep(.el-input__wrapper:focus-within) {
+    background: #FFFFFF;
+    box-shadow: 0 0 24px rgba(57, 197, 187, 0.45);
+}
+
+.miku-search-capsule :deep(.el-input-group__append) {
+    border-radius: 0 40px 40px 0;
     background: transparent;
+    padding: 0;
+    border: none;
+}
+
+.search-input-icon {
+    font-size: 16px;
+    color: #12A79C;
+}
+
+.miku-search-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 24px;
+    background: linear-gradient(135deg, #0B7A73 0%, #08635D 100%);
+    color: #FFFFFF;
+    font-size: 13.5px;
+    font-weight: 800;
+    border: none;
+    border-radius: 0 40px 40px 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 14px rgba(57, 197, 187, 0.3);
+}
+
+.miku-search-submit-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #39C5BB 0%, #12A79C 100%);
+    box-shadow: 0 6px 20px rgba(57, 197, 187, 0.5);
+}
+
+.miku-search-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.hero-hot-tags {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.hot-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.miku-hot-tag-chip {
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background: rgba(57, 197, 187, 0.16);
+    border: none;
+    color: #A3F3ED;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.miku-hot-tag-chip:hover {
+    background: #39C5BB;
+    color: #0E2220;
+    box-shadow: 0 4px 12px rgba(57, 197, 187, 0.4);
 }
 
 .search-summary {
-    font-size: 14px;
-    color: #8888aa;
-    margin: 0;
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 20px;
 }
 
-.search-summary strong {
-    color: #A78BFA;
+.kw-text {
+    color: #39C5BB;
     font-weight: 800;
 }
 
-/* ==================== 搜索结果 ==================== */
+/* ==================== 搜索结果区 ==================== */
 .results-section {
     max-width: 900px;
     margin: 0 auto;
-    padding: 24px 16px 60px;
+    padding: 32px 20px 80px;
 }
 
-@media (min-width: 768px) {
-    .results-section {
-        padding: 30px 20px 80px;
-    }
-}
-
-.article-card {
+/* 搜索结果卡：开 content-visibility 让离屏结果跳过渲染；transition 仅过渡 hover 实际改动的属性 */
+.miku-article-card {
     position: relative;
     display: flex;
-    gap: 16px;
-    margin-bottom: 14px;
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    gap: 0;
+    align-items: center;
+    margin-bottom: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 20px;
+    border: none;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     overflow: hidden;
-    opacity: 0;
-    transform: translateY(15px);
-    animation: fadeInUp 0.5s ease forwards;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+    content-visibility: auto;
+    contain-intrinsic-size: auto 160px;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s ease;
+    box-shadow: 0 8px 24px rgba(8, 90, 87, 0.08);
 }
 
-@media (min-width: 768px) {
-    .article-card {
-        gap: 0;
-        align-items: center;
-        border-radius: 18px;
-        margin-bottom: 16px;
-    }
+.card-top-miku-line {
+    display: none;
 }
 
-@keyframes fadeInUp {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.card-top-accent {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    z-index: 2;
-}
-
-.theme-0 .card-top-accent {
-    background: linear-gradient(90deg, #FF6B6B, #FF8E8E);
-}
-
-.theme-1 .card-top-accent {
-    background: linear-gradient(90deg, #4ECDC4, #7EDDD6);
-}
-
-.theme-2 .card-top-accent {
-    background: linear-gradient(90deg, #A78BFA, #C4B5FD);
-}
-
-.theme-3 .card-top-accent {
-    background: linear-gradient(90deg, #FCD34D, #FDE68A);
-}
-
-.article-card:hover {
+.miku-article-card:hover {
     transform: translateY(-4px);
-    border-color: transparent;
+    box-shadow: 0 14px 34px rgba(57, 197, 187, 0.22);
 }
 
-.theme-0:hover {
-    box-shadow: 0 14px 35px rgba(255, 107, 107, 0.15);
-}
-
-.theme-1:hover {
-    box-shadow: 0 14px 35px rgba(78, 205, 196, 0.15);
-}
-
-.theme-2:hover {
-    box-shadow: 0 14px 35px rgba(167, 139, 250, 0.15);
-}
-
-.theme-3:hover {
-    box-shadow: 0 14px 35px rgba(252, 211, 77, 0.15);
-}
-
-/* 封面图（手机端也显示） */
 .card-cover {
-    width: 100%;
+    width: 180px;
     height: 140px;
     flex-shrink: 0;
     overflow: hidden;
     position: relative;
 }
 
-@media (min-width: 768px) {
-    .card-cover {
-        width: 170px;
-        height: 100%;
-        min-height: 130px;
-    }
-
-    .card-cover::before {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 1px;
-        background: rgba(0, 0, 0, 0.04);
-        z-index: 2;
-    }
-}
-
 .cover-img {
     width: 100%;
     height: 100%;
-    display: block;
+    transition: transform 0.4s ease;
+}
+
+.miku-article-card:hover .cover-img {
+    transform: scale(1.06);
 }
 
 .cover-fallback {
@@ -461,102 +492,59 @@ watch(() => route.query.keyword, (newVal) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f9fb;
-    color: #ddd;
+    background: rgba(57, 197, 187, 0.08);
+    color: #12A79C;
 }
 
-/* 内容区 */
 .card-content {
     flex: 1;
-    padding: 16px;
+    padding: 20px 24px;
     min-width: 0;
-}
-
-@media (min-width: 768px) {
-    .card-content {
-        padding: 20px 22px;
-    }
 }
 
 .card-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
-.card-index {
+.miku-card-index {
+    font-family: monospace;
     font-size: 13px;
     font-weight: 900;
-}
-
-.theme-0 .card-index {
-    color: #FF6B6B;
-}
-
-.theme-1 .card-index {
-    color: #4ECDC4;
-}
-
-.theme-2 .card-index {
-    color: #A78BFA;
-}
-
-.theme-3 .card-index {
-    color: #FCD34D;
+    color: #39C5BB;
+    background: rgba(57, 197, 187, 0.12);
+    padding: 2px 8px;
+    border-radius: 6px;
 }
 
 .card-category {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
     padding: 3px 12px;
-    border-radius: 20px;
-}
-
-.theme-0 .card-category {
-    background: #FFF0F0;
-    color: #FF6B6B;
-}
-
-.theme-1 .card-category {
-    background: #E8FAF8;
-    color: #38B2AC;
-}
-
-.theme-2 .card-category {
-    background: #F3F0FF;
-    color: #A78BFA;
-}
-
-.theme-3 .card-category {
-    background: #FFFBEB;
-    color: #D97706;
+    border-radius: 9999px;
+    background: rgba(18, 167, 156, 0.12);
+    color: #12A79C;
 }
 
 .card-time {
     font-size: 12px;
-    color: #bbb;
+    color: #64748B;
 }
 
 .card-title {
-    font-size: 15px;
-    color: #1a1a2e;
-    margin: 0 0 6px;
-    font-weight: 700;
+    font-size: 17.5px;
+    font-weight: 800;
+    color: #0F3B37;
+    margin: 0 0 8px;
     line-height: 1.4;
 }
 
-@media (min-width: 768px) {
-    .card-title {
-        font-size: 17px;
-    }
-}
-
 .card-desc {
-    font-size: 13px;
-    color: #999;
-    margin: 0 0 12px;
+    font-size: 13.5px;
+    color: #475569;
+    margin: 0 0 14px;
     line-height: 1.6;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -565,61 +553,56 @@ watch(() => route.query.keyword, (newVal) => {
     -webkit-box-orient: vertical;
 }
 
-:deep(.highlight) {
-    color: #A78BFA;
-    font-weight: 700;
-    background: rgba(167, 139, 250, 0.1);
-    padding: 0 2px;
-    border-radius: 3px;
+:deep(.miku-highlight) {
+    color: #0B7A73;
+    font-weight: 900;
+    background: rgba(57, 197, 187, 0.25);
+    padding: 1px 5px;
+    border-radius: 4px;
 }
 
 .card-footer {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 14px;
 }
 
 .card-author {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #555;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.miku-author-avatar-ring {
+    padding: 1.5px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #39C5BB, #12A79C);
 }
 
 .author-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
+    background: #FFFFFF;
+    color: #0B7A73;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
+    font-weight: 900;
+}
+
+.miku-tag-pill {
+    font-size: 11px;
     font-weight: 700;
-    color: #fff;
-}
-
-.theme-0 .author-avatar {
-    background: #FF6B6B;
-}
-
-.theme-1 .author-avatar {
-    background: #4ECDC4;
-}
-
-.theme-2 .author-avatar {
-    background: #A78BFA;
-}
-
-.theme-3 .author-avatar {
-    background: #FCD34D;
-}
-
-.card-tags {
-    display: flex;
-    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    background: rgba(57, 197, 187, 0.1);
+    color: #0F4F49;
+    border: none;
 }
 
 .meta-item {
@@ -627,23 +610,39 @@ watch(() => route.query.keyword, (newVal) => {
     align-items: center;
     gap: 4px;
     font-size: 12px;
-    color: #bbb;
+    color: #64748B;
     margin-left: auto;
 }
 
-/* ==================== 占位提示 ==================== */
-.search-placeholder {
+/* 空状态 */
+.miku-empty-box,
+.miku-placeholder-box {
     text-align: center;
     padding: 60px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+    border-radius: 24px;
+    border: none;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 30px rgba(8, 90, 87, 0.08);
 }
 
-.search-placeholder p {
-    font-size: 15px;
-    color: #ccc;
+.empty-icon-ring,
+.miku-pulse-icon {
+    font-size: 42px;
+    color: #39C5BB;
+    margin-bottom: 12px;
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0F3B37;
+    margin: 0 0 6px;
+}
+
+.empty-sub,
+.placeholder-text {
+    font-size: 14px;
+    color: #64748B;
     margin: 0;
 }
 </style>

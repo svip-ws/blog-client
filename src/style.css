@@ -1,45 +1,1110 @@
-/* =========================
-   全局样式
-========================= */
+/* =========================================================
+   初音小站 (MIKU HUB ARCHIVE)
+   初音未来主题 · MIKU TEAL DESIGN SYSTEM
+========================================================= */
+
+:root {
+  /* MIKU TEAL COLOR PALETTE */
+  --miku-teal: #39C5BB;        /* 主色 · 初音青 */
+  --miku-deep: #12A79C;        /* 强调 · 深青 */
+  --miku-pink: #FF7E9D;        /* 点缀 · 霓虹粉 */
+  --miku-bg: #EAF9F8;          /* 页面底色 · 清新浅青 */
+  --miku-text: #14322F;        /* 标题与正文 · 深墨青 */
+  --miku-tag-bg: #E3F7F4;      /* 标签浅底 */
+  --miku-footer-bg: #14322F;   /* 页脚深墨绿 */
+  
+  /* 语义映射 */
+  --primary-color: #39C5BB;
+  --primary-gradient: linear-gradient(135deg, #39C5BB 0%, #12A79C 100%);
+  --accent-gradient: linear-gradient(135deg, #39C5BB 0%, #FF7E9D 100%);
+  
+  --bg-page: #EAF9F8;
+  --bg-panel: rgba(255, 255, 255, 0.90);
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  
+  --border-glass: transparent;
+  --border-subtle: transparent;
+  
+  --text-main: #14322F;
+  --text-regular: #285450;
+  --text-muted: #5C837F;
+  --text-light: #8BA8A5;
+  
+  --shadow-card: 0 12px 32px rgba(8, 90, 87, 0.08);
+  --shadow-hover: 0 18px 42px rgba(57, 197, 187, 0.16);
+  --shadow-btn: 0 8px 20px rgba(57, 197, 187, 0.34);
+  
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* 布局 chrome 占位：页脚高度。
+     主体最小高度统一 = 100vh - var(--footer-reserve)，用于短页面把页脚压在视口底部；
+     页脚高度调整时只改这一处，不要再散落写 calc(100vh - 130px) 这类字面量。 */
+  --footer-reserve: 120px;
+
+  /* 固定导航栏让位体系：完整吸顶栏高度 76px + 20px 呼吸间距 = 96px。
+     NavBar 是 position:fixed，不占文档流；所有页面首屏主体必须自行让位 ≥96px。
+     统一从 --navbar-clearance 取值，不要再散落写 24px / 50px / 85px 之类字面量。 */
+  --navbar-height: 76px;
+  --navbar-gap: 20px;
+  --navbar-clearance: calc(var(--navbar-height) + var(--navbar-gap));
+
+  /* 音量柱 / 频谱条尺寸体系（Hero 与分类·标签·归档三页共用）
+     所有 EQ 条只从这里取值，需要整体调大调小改这一处即可 */
+  --eq-bar-w: 2.5px;   /* 单根柱宽 */
+  --eq-gap: 2.5px;     /* 柱间距 */
+  --eq-h-lg: 54px;     /* 大 · Hero 母题居中的主频谱 */
+  --eq-h-md: 22px;     /* 中 · Hero HUD 看板内频谱 */
+  --eq-h-sm: 18px;     /* 小 · 页面卡片内迷你频谱 */
+  --eq-h-xs: 14px;     /* 极小 · Hero 顶部声波条 / 归档月份表头频谱 */
+}
 
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 html,
 body,
 #app {
-    width: 100%;
-    min-height: 100%;
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
-    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f6f7fb;
-    color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background-color: #EAF9F8;
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(57, 197, 187, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(255, 126, 157, 0.08) 0%, transparent 40%);
+  background-attachment: fixed;
+  color: var(--miku-text);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================
+   全局轻量初音主题滚动条 (保留可读与可拖拽交互)
+   ========================================================= */
+html,
+body,
+#app,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(57, 197, 187, 0.42) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(57, 197, 187, 0.42);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(18, 167, 156, 0.72);
+}
+
+html.is-scrolling ::-webkit-scrollbar-thumb {
+  background: rgba(57, 197, 187, 0.78);
+}
+
+/* =========================================================
+   滚动性能优化：滚动进行中暂停非必要装饰动画（保留 backdrop-filter 避免闪烁）
+   scrollActivity.js 在滚动时给 <html> 挂 is-scrolling，
+   停滚 650ms 后摘除，动画自动恢复。
+   ========================================================= */
+
+/* 滚动时暂停装饰性 CSS 动画，消除 GPU 合成开销 */
+html.is-scrolling *,
+html.is-scrolling *::before,
+html.is-scrolling *::after {
+  animation-play-state: paused !important;
 }
 
 a {
-    color: inherit;
-    text-decoration: none;
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 img {
-    display: block;
-    max-width: 100%;
+  display: block;
+  max-width: 100%;
 }
 
-/* =========================
-   响应式断点（后续统一使用）
-========================= */
+/* 1. MIKU TEAL 毛玻璃卡片 */
+.glass-sakura-card {
+  background: var(--bg-panel);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-/* 平板 */
-@media (max-width: 1024px) {}
+.glass-sakura-card:hover {
+  border-color: rgba(57, 197, 187, 0.50);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+}
 
-/* 手机 */
-@media (max-width: 768px) {}
+/* 2. Miku 胶囊按钮 (Pill Button) */
+.crystal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: #E3F7F4;
+  border: 1px solid rgba(57, 197, 187, 0.25);
+  color: #12A79C;
+  transition: all 0.25s ease;
+}
 
-/* 小屏手机 */
-@media (max-width: 480px) {}
+.crystal-pill:hover {
+  background: #39C5BB;
+  color: #FFFFFF;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-btn);
+}
+
+.crystal-pill.active {
+  background: #39C5BB;
+  color: #FFFFFF;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: var(--shadow-btn);
+}
+
+/* 通用 Page Header */
+.page-container {
+  min-height: calc(100vh - var(--footer-reserve));
+  padding-top: var(--navbar-clearance);
+  padding-bottom: 60px;
+}
+
+.page-header {
+  position: relative;
+  padding: 48px 24px 36px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(227, 247, 244, 0.9) 0%, rgba(234, 249, 248, 0.6) 100%);
+  border-bottom: 1px solid rgba(57, 197, 187, 0.3);
+  border-radius: var(--radius-lg);
+  margin-bottom: 32px;
+}
+
+.page-header .hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(57, 197, 187, 0.15);
+  border: 1px solid rgba(57, 197, 187, 0.35);
+  color: #12A79C;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.page-header .hero-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: var(--miku-text);
+}
+
+.page-header .hero-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin: 0 auto 16px;
+  line-height: 1.6;
+}
+
+.page-header .stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px;
+  border-radius: var(--radius-pill);
+  background: #FFFFFF;
+  border: 1px solid rgba(57, 197, 187, 0.3);
+  font-size: 12px;
+}
+
+.page-header .stat-num {
+  font-weight: 800;
+  color: #39C5BB;
+}
+
+/* 全局 Element Plus Customization & Miku Dropdown Poppers */
+.el-message {
+  border-radius: var(--radius-pill) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1.5px solid var(--miku-teal) !important;
+  color: var(--miku-text) !important;
+  box-shadow: 0 10px 30px rgba(57, 197, 187, 0.25) !important;
+  font-weight: 700 !important;
+}
+
+.el-button--primary {
+  background: var(--primary-gradient) !important;
+  border: none !important;
+  border-radius: var(--radius-pill) !important;
+  box-shadow: var(--shadow-btn) !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+}
+
+.el-button--primary:hover {
+  background: var(--miku-deep) !important;
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   Simple Minimalist Element Plus Popper & Dropdown Redesign
+   ========================================================= */
+.el-popper,
+.el-dropdown__popper,
+.anime-dropdown-menu {
+  border-radius: 12px !important;
+  background: #FFFFFF !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05) !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+}
+
+.el-popper__arrow,
+.el-popper__arrow::before {
+  background: #FFFFFF !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.el-dropdown-menu {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.el-dropdown-menu__item {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  color: #1E293B !important;
+  padding: 8px 14px !important;
+  gap: 8px !important;
+  font-size: 13.5px !important;
+  margin-bottom: 1px !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-dropdown-menu__item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.el-dropdown-menu__item:hover,
+.el-dropdown-menu__item:focus {
+  background: #F1F5F9 !important;
+  color: #39C5BB !important;
+  transform: none !important;
+}
+
+.el-dropdown-menu__item .el-icon {
+  font-size: 14px !important;
+  color: #64748B !important;
+  transition: color 0.15s ease !important;
+}
+
+.el-dropdown-menu__item:hover .el-icon {
+  color: #39C5BB !important;
+}
+
+.el-dropdown-menu__item.is-disabled {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}
+
+.el-dropdown-menu__item--divided {
+  border-top: 1px solid #F1F5F9 !important;
+  margin-top: 4px !important;
+  padding-top: 8px !important;
+}
+
+/* =========================================================
+   触觉按钮 (Tactile Buttons) & 微交互动效
+   ========================================================= */
+.tactile-btn {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.2s ease, 
+              background-color 0.2s ease,
+              border-color 0.2s ease !important;
+}
+
+/* 按钮点击触感光波脉冲 */
+.tactile-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(57, 197, 187, 0.35) 0%, rgba(255, 126, 157, 0.15) 45%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  z-index: 10;
+}
+
+/* 按压弹簧压缩物理反馈 */
+.tactile-btn:active {
+  transform: scale(0.94) translateY(1.5px) !important;
+  box-shadow: inset 0 2px 6px rgba(14, 50, 47, 0.18), 0 2px 8px rgba(57, 197, 187, 0.2) !important;
+}
+
+.tactile-btn:active::before {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  transition: transform 0s, opacity 0s;
+}
+
+/* 大尺寸卡片按压沉稳反馈 */
+.article-card.tactile-btn:active,
+.featured-card.tactile-btn:active,
+.category-card.tactile-btn:active,
+.glass-miku-card.tactile-btn:active {
+  transform: scale(0.985) translateY(2px) !important;
+  box-shadow: inset 0 2px 8px rgba(8, 90, 87, 0.12), 0 4px 14px rgba(8, 90, 87, 0.08) !important;
+}
+
+/* 晶透小药丸 / 标签按压高弹反馈 */
+.crystal-pill.tactile-btn:active,
+.tag-pill-ultimate.tactile-btn:active,
+.sort-tab-btn.tactile-btn:active {
+  transform: scale(0.91) translateY(1px) !important;
+}
+
+/* 主按钮扫光动效 */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  transform: rotate(25deg);
+  transition: all 0.65s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.shine-effect:hover::after {
+  left: 130%;
+  opacity: 1;
+}
+
+/* =========================================================
+   文字动效 & Hover 下划线
+   ========================================================= */
+.gradient-text-shine {
+  background: linear-gradient(135deg, #14322F 0%, #12A79C 50%, #39C5BB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes shineGradient {
+  0% { opacity: 0.9; }
+  50% { opacity: 1; }
+  100% { opacity: 0.9; }
+}
+
+.hover-underline-miku {
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.hover-underline-miku::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, #39C5BB, #12A79C);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-underline-miku:hover::after {
+  width: 100%;
+}
+
+/* =========================================================
+   无边卡片层次 + 全息鼠标跟随聚光特效 (.holo-interactive)
+   ========================================================= */
+.card-tier-elevated {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: none;
+  box-shadow: 0 12px 32px rgba(8, 90, 87, 0.08);
+  border-radius: var(--radius-lg);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease;
+}
+
+.card-tier-elevated:hover {
+  box-shadow: 0 22px 48px rgba(8, 90, 87, 0.14), 0 0 28px rgba(57, 197, 187, 0.14);
+  transform: translateY(-5px) scale(1.006);
+}
+
+/* 实时跟随鼠标的全息径向高光（由 v-holo 指令驱动 --hx, --hy） */
+.holo-interactive {
+  will-change: transform;
+}
+
+.holo-interactive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  background: radial-gradient(
+    360px circle at var(--hx, 50%) var(--hy, 50%),
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(57, 197, 187, 0.14) 36%,
+    rgba(255, 126, 157, 0.08) 60%,
+    transparent 76%
+  );
+  transition: opacity 0.28s ease;
+}
+
+.holo-interactive:hover::after {
+  opacity: 1;
+}
+
+html.reduce-motion .holo-interactive::after {
+  display: none;
+}
+
+/* 进场动画（极速 GPU 合成） */
+.stagger-enter {
+  opacity: 0;
+  animation: fadeUpEntrance 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeUpEntrance {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* =========================================================
+   初音未来 3D 赛博音符全息下拉控制舱 (MAX 终极 3D + 流动特效 + 立绘壁纸)
+   (ULTIMATE 3D MIKU VOCALOID 01 CYBER DROPDOWN SYSTEM)
+   ========================================================= */
+
+/* 1. 全息声音胶囊输入框总控 (.el-select, .el-select__wrapper, .el-input__wrapper) */
+.el-select {
+  --el-select-input-focus-border-color: #39C5BB !important;
+  --el-select-border-color-hover: #39C5BB !important;
+  --el-color-primary: #39C5BB !important;
+  perspective: 800px;
+}
+
+.el-select .el-input__wrapper,
+.el-select__wrapper {
+  position: relative !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(224, 248, 244, 0.90) 100%) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  padding: 2px 14px !important;
+  box-shadow: 0 6px 20px rgba(57, 197, 187, 0.14) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  isolation: isolate;
+  overflow: hidden !important;
+}
+
+/* 胶囊前缀 3D 音符浮动与旋律发光 */
+.el-select .el-input__wrapper::before {
+  content: '♪' !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  color: #39C5BB !important;
+  margin-right: 6px !important;
+  text-shadow: 0 0 12px rgba(57, 197, 187, 0.95) !important;
+  display: inline-block !important;
+  animation: soundPodNoteFloat 2.2s ease-in-out infinite alternate !important;
+}
+
+@keyframes soundPodNoteFloat {
+  0% { transform: translateY(0) rotate(0deg) scale(1); filter: drop-shadow(0 0 4px #39C5BB); }
+  100% { transform: translateY(-4px) rotate(12deg) scale(1.18); filter: drop-shadow(0 0 10px #00F3FF); }
+}
+
+.el-select .el-input__wrapper:hover,
+.el-select__wrapper:hover {
+  border-color: #39C5BB !important;
+  box-shadow: 0 10px 30px rgba(57, 197, 187, 0.42), 0 0 25px rgba(57, 197, 187, 0.35) !important;
+  transform: translateY(-2px) translateZ(6px) scale(1.01);
+}
+
+.el-select .el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-select .el-input__wrapper:focus-within {
+  border-color: #39C5BB !important;
+  box-shadow: 0 0 0 4px rgba(57, 197, 187, 0.35), 0 0 32px rgba(57, 197, 187, 0.6) !important;
+}
+
+.el-select .el-input__inner,
+.el-select__selected-item {
+  color: #0E2926 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 13.5px !important;
+  letter-spacing: 0.4px !important;
+}
+
+.el-select .el-input__suffix .el-icon,
+.el-select__caret {
+  color: #39C5BB !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.el-select .el-input__wrapper.is-focus .el-select__caret,
+.el-select__wrapper.is-focused .el-select__caret {
+  transform: rotate(180deg) scale(1.3) !important;
+  color: #00F3FF !important;
+}
+
+/* 2. 彻底移除 Element Plus / Custom 弹出框外部默认白色底框 (.el-popper) */
+.el-popper.is-light,
+.el-popper.is-pure,
+.el-popper.el-dropdown__popper,
+.el-dropdown__popper,
+.el-popper[role="tooltip"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 3. 3D 赛博全息歌姬音轨舱下拉弹窗 (.el-select-dropdown, .el-dropdown-menu, .el-cascader__dropdown) */
+.el-select-dropdown,
+.el-dropdown-menu,
+.el-cascader__dropdown,
+.el-autocomplete-suggestion {
+  position: relative !important;
+  background-color: rgba(14, 41, 38, 0.95) !important;
+  background-image: 
+    radial-gradient(circle at 90% 10%, rgba(0, 243, 255, 0.38) 0%, transparent 60%),
+    radial-gradient(circle at 10% 90%, rgba(57, 197, 187, 0.32) 0%, transparent 60%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(212, 247, 242, 0.96) 100%),
+    url('/images/miku/miku_wp_8.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-blend-mode: overlay !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 18px 48px rgba(14, 79, 74, 0.22), 
+    0 0 28px rgba(57, 197, 187, 0.22) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  padding: 8px 6px 6px 6px !important;
+  overflow: visible !important;
+  transform-style: preserve-3d !important;
+  perspective: 1200px !important;
+  animation: miku3DDropdownPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+}
+
+/* 滚动容器优化防遮挡 */
+.el-select-dropdown__wrap,
+.el-scrollbar__wrap {
+  overflow-x: hidden !important;
+  padding: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.el-select-dropdown__list,
+.el-dropdown-menu {
+  padding: 3px 2px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 全息 3D 扫光动画遮罩 */
+.el-select-dropdown::after,
+.el-dropdown-menu::after,
+.el-cascader__dropdown::after {
+  display: none !important;
+}
+
+@keyframes dropdownGlassShine {
+  0% { transform: translateY(-100%) rotate(25deg); }
+  30%, 100% { transform: translateY(100%) rotate(25deg); }
+}
+
+@keyframes miku3DDropdownPop {
+  0% { 
+    opacity: 0; 
+    transform: perspective(1200px) rotateX(-16deg) rotateY(8deg) translateZ(-20px) translateY(-10px) scale(0.92); 
+    filter: brightness(0.7) blur(4px);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(1200px) rotateX(3deg) translateZ(6px) translateY(1px) scale(1.005);
+    filter: brightness(1.03) blur(0px);
+  }
+  100% { 
+    opacity: 1; 
+    transform: perspective(1200px) rotateX(0deg) translateZ(0) translateY(0) scale(1); 
+    filter: brightness(1) blur(0px);
+  }
+}
+
+/* 顶栏 Q 版初音 Mascot 3D 全息控制台头条 (精致紧凑版) */
+.el-select-dropdown::before,
+.el-dropdown-menu::before {
+  content: '♪ VOCALOID 01 :: 3D 节点舱' !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  margin: -8px -6px 6px -6px !important;
+  padding: 0 38px 0 10px !important;
+  background: linear-gradient(135deg, #0A1E1C 0%, #16433E 100%) !important;
+  border-bottom: 1.8px solid #39C5BB !important;
+  border-radius: 12px 12px 0 0 !important;
+  font-family: 'Audiowide', monospace !important;
+  font-size: 9.5px !important;
+  font-weight: 900 !important;
+  color: #39C5BB !important;
+  letter-spacing: 0.8px !important;
+  text-shadow: 0 0 10px rgba(57, 197, 187, 0.95) !important;
+  background-image: url('/images/miku/miku_chibi_main.png') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 8px center !important;
+  background-size: 28px 28px !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35) !important;
+  animation: chibi3DBounce 3s ease-in-out infinite alternate !important;
+}
+
+@keyframes chibi3DBounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
+}
+
+/* Popper Arrow 尖角箭头 3D 发光 */
+.el-popper[data-popper-placement^="bottom"] .el-popper__arrow::before,
+.el-popper[data-popper-placement^="top"] .el-popper__arrow::before {
+  background: #0A1E1C !important;
+  border: 1.5px solid #39C5BB !important;
+  box-shadow: 0 0 12px rgba(57, 197, 187, 0.8) !important;
+}
+
+/* 4. 3D 音符节点选项条目 (初音壁纸背景与未悬停微模糊/悬停清晰版) (.el-select-dropdown__item, .el-dropdown-menu__item) */
+.el-select-dropdown__item,
+.el-dropdown-menu__item {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 12px !important;
+  margin: 3px 0 !important;
+  border-radius: 10px !important;
+  background: rgba(240, 252, 250, 0.72) !important;
+  border: none !important;
+  color: #062B28 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 2px 8px rgba(8, 90, 87, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+/* 下拉菜单选项背景图片底层 (未悬停：稍带模糊 + 半透明壁纸；字体不受模糊影响) */
+.el-select-dropdown__item::before,
+.el-dropdown-menu__item::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-image: url('/images/miku/miku_wp_8.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  opacity: 0.15 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* 丰富多款初音壁纸轮换 (1~5) */
+.el-select-dropdown__item:nth-child(5n+1)::before,
+.el-dropdown-menu__item:nth-child(5n+1)::before {
+  background-image: url('/images/miku/miku_wp_1.jpg') !important;
+}
+.el-select-dropdown__item:nth-child(5n+2)::before,
+.el-dropdown-menu__item:nth-child(5n+2)::before {
+  background-image: url('/images/miku/miku_wp_8.jpg') !important;
+}
+.el-select-dropdown__item:nth-child(5n+3)::before,
+.el-dropdown-menu__item:nth-child(5n+3)::before {
+  background-image: url('/images/miku/miku_wp_3.jpg') !important;
+}
+.el-select-dropdown__item:nth-child(5n+4)::before,
+.el-dropdown-menu__item:nth-child(5n+4)::before {
+  background-image: url('/images/miku/miku_wp_7.jpg') !important;
+}
+.el-select-dropdown__item:nth-child(5n+5)::before,
+.el-dropdown-menu__item:nth-child(5n+5)::before {
+  background-image: url('/images/miku/miku_wp_2.jpg') !important;
+}
+
+/* 3D 选项 Hover 悬停：背景壁纸变高清清晰 + 青色发光框 */
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover,
+.el-dropdown-menu__item:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: #39C5BB !important;
+  color: #032422 !important;
+  font-weight: 900 !important;
+  padding-left: 16px !important;
+  transform: translateY(-1.5px) translateZ(6px) !important;
+  box-shadow: 
+    0 6px 20px rgba(57, 197, 187, 0.45), 
+    0 0 14px rgba(0, 243, 255, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.85) !important;
+  z-index: 10 !important;
+}
+
+.el-select-dropdown__item.hover::before,
+.el-select-dropdown__item:hover::before,
+.el-dropdown-menu__item:hover::before {
+  opacity: 0.92 !important;
+  filter: blur(0px) brightness(1.05) !important;
+  transform: scale(1.0) !important;
+}
+
+/* 悬停音符 Icon 动态点缀 */
+.el-select-dropdown__item:hover:not(.selected)::after,
+.el-dropdown-menu__item:hover:not(.is-active)::after {
+  content: '♪' !important;
+  margin-left: auto !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  color: #39C5BB !important;
+  animation: note3DSpinJump 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate !important;
+}
+
+@keyframes note3DSpinJump {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0.75; }
+  100% { transform: translateY(-3px) rotate(16deg) scale(1.3); opacity: 1; text-shadow: 0 0 10px #00F3FF; }
+}
+
+/* 选中态 Option (.selected, .is-active) 3D 高清超亮壁纸 + 电青色质感 */
+.el-select-dropdown__item.selected,
+.el-dropdown-menu__item.is-active {
+  background: rgba(10, 40, 38, 0.45) !important;
+  border-color: #00F3FF !important;
+  color: #FFFFFF !important;
+  font-weight: 900 !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8) !important;
+  transform: translateY(-1px) translateZ(5px) !important;
+  box-shadow: 0 6px 22px rgba(57, 197, 187, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.el-select-dropdown__item.selected::before,
+.el-dropdown-menu__item.is-active::before {
+  opacity: 0.95 !important;
+  filter: blur(0px) brightness(0.75) contrast(1.1) !important;
+  transform: scale(1.0) !important;
+}
+
+.el-select-dropdown__item.selected::after,
+.el-dropdown-menu__item.is-active::after {
+  content: '✓ 39.0MHz' !important;
+  margin-left: auto !important;
+  font-family: 'Audiowide', monospace !important;
+  font-size: 10.5px !important;
+  font-weight: 900 !important;
+  color: #FFFFFF !important;
+  letter-spacing: 0.8px !important;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.95) !important;
+}
+
+/* 多选 Tag 胶囊 3D 浮动 (.el-tag) */
+.el-select .el-tag {
+  background: linear-gradient(135deg, #39C5BB 0%, #12A79C 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 9px !important;
+  font-weight: 800 !important;
+  padding: 3px 10px !important;
+  box-shadow: 0 4px 12px rgba(57, 197, 187, 0.45) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.el-select .el-tag:hover {
+  transform: scale(1.06) translateY(-1px) !important;
+}
+
+.el-select .el-tag .el-tag__close {
+  color: #FFFFFF !important;
+}
+
+.el-select .el-tag .el-tag__close:hover {
+  background: rgba(0, 0, 0, 0.28) !important;
+}
+
+/* 5. 原生 <select> 下拉控件 3D 升级 */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(224, 248, 244, 0.90) 100%);
+  border: none;
+  border-radius: 16px;
+  padding: 10px 42px 10px 18px;
+  color: #0E2926;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(57, 197, 187, 0.14);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2339C5BB' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+select:hover {
+  border-color: #39C5BB;
+  box-shadow: 0 10px 28px rgba(57, 197, 187, 0.35);
+  transform: translateY(-2px);
+}
+
+select:focus {
+  border-color: #39C5BB;
+  box-shadow: 0 0 0 4px rgba(57, 197, 187, 0.3), 0 0 24px rgba(57, 197, 187, 0.45);
+}
+
+select option {
+  background: #EAF9F8;
+  color: #0E2926;
+  font-weight: 800;
+  padding: 12px;
+}
+
+/* =========================================================
+   6. 全站移动端深度响应式适配 (GLOBAL MOBILE RESPONSIVENESS)
+   ========================================================= */
+
+/* 1. 防溢出与通用排版 */
+html, body {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 富文本代码块与表格移动端横向自适应（仅作用域化保护，避免影响 Element/组件表格） */
+pre, code {
+  max-width: 100%;
+}
+
+/* 2. 断点 992px：Tablet / 小屏笔记本 */
+@media (max-width: 992px) {
+  :root {
+    --navbar-clearance: 76px;
+  }
+
+  .main-container,
+  .articles-container,
+  .categories-container,
+  .tags-container,
+  .archives-container,
+  .about-container,
+  .profile-container,
+  .publish-container,
+  .messages-container,
+  .snapshots-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 登录/注册卡片小屏宽度 */
+  .login-card,
+  .register-card {
+    width: 100% !important;
+    max-width: 400px !important;
+    padding: 30px 22px !important;
+  }
+}
+
+/* 3. 断点 768px：Mobile 手机纵屏 */
+@media (max-width: 768px) {
+  :root {
+    --navbar-clearance: 70px;
+  }
+
+  .main-container,
+  .articles-container,
+  .categories-container,
+  .tags-container,
+  .archives-container,
+  .about-container,
+  .profile-container,
+  .publish-container,
+  .messages-container,
+  .snapshots-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* 各种侧边栏与主列在手机屏垂直堆叠 */
+  .layout-grid,
+  .content-grid,
+  .profile-grid,
+  .publish-grid {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Element Plus 弹窗 / Drawer 适配 */
+  .el-dialog {
+    width: 92% !important;
+    margin: 15px auto !important;
+  }
+
+  /* 移动端离线/长列表滚动裁剪提示（不强加 translateZ(0)，避免产生错误 fixed 定位包含块） */
+  .glass-miku-card,
+  .miku-msg-card,
+  .article-item,
+  .comment-item,
+  .category-card,
+  .featured-grid-item,
+  .sidebar-box {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 160px;
+  }
+
+  /* 移动端适当降低毛玻璃模糊半径，提升 60fps/120fps 高刷屏流畅度 */
+  .glass-miku-card,
+  .miku-hud-header,
+  .miku-cyber-player,
+  .status-chip-btn,
+  .hud-pill-btn {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+}
+
+/* =========================================================
+   移动端触摸零延迟响应 (ZERO-DELAY TOUCH RESPONSE)
+   ========================================================= */
+a, button, input, textarea, select, [role="button"],
+.tactile-btn, .glass-miku-card, .status-chip-btn, .hud-pill-btn,
+.pink-pulse-btn, .miku-msg-card, .article-item, .comment-item,
+.user-avatar-trigger, .nav-item {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* =========================================================
+   骨架屏、预加载与懒加载 深度样式与移动端适配
+   ========================================================= */
+
+/* Element Plus 骨架屏全站 MIKU 渐变与移动端自适应 */
+.el-skeleton {
+  --el-skeleton-color: rgba(57, 197, 187, 0.12) !important;
+  --el-skeleton-to-color: rgba(57, 197, 187, 0.28) !important;
+}
+
+@media (max-width: 768px) {
+  .el-skeleton__item {
+    border-radius: 8px !important;
+  }
+  .el-skeleton__image {
+    height: 130px !important;
+  }
+  .el-skeleton__p {
+    height: 14px !important;
+  }
+}
+
+/* 全站图片懒加载（Native & Element Image Lazy）占位与渐显 */
+img[loading="lazy"],
+.el-image__inner[loading="lazy"] {
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+  content-visibility: auto;
+}
+
+img:not([src]), img[src=""] {
+  opacity: 0;
+}

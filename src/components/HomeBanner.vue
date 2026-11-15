@@ -1,75 +1,87 @@
 <template>
     <div class="banner-wrapper" v-if="banners.length > 0">
-        <div class="banner-track" ref="trackRef" @mouseenter="pauseAuto" @mouseleave="resumeAuto"
-            @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
+        <div class="banner-track" ref="trackRef" :class="{ 'is-paused': isPaused, 'is-dragging': dragging, 'is-reduced': reducedMotion }"
+            :style="{ '--interval': INTERVAL / 1000 + 's' }"
+            @mouseenter="onTrackEnter" @mouseleave="onTrackLeave"
+            @mousemove="handleParallax"
+            @mousedown="onDragStart"
+            @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
 
             <!-- 轮播项 -->
             <div v-for="(item, index) in banners" :key="item.id" class="banner-slide"
                 :class="{ active: currentIndex === index }">
 
-                <!-- 图片类型 -->
-                <div class="slide-media" v-if="item.media_type === 'image'">
-                    <img :src="item.media_url" :alt="item.title" class="slide-img" draggable="false" />
-                </div>
-
-                <!-- 视频类型 -->
-                <div class="slide-media" v-else-if="item.media_type === 'video'">
-                    <video :src="item.media_url" class="slide-video" muted loop playsinline
+                <!-- 媒体背景（带视差缩放） -->
+                <div class="slide-media" :style="mediaParallaxStyle">
+                    <img v-if="item.media_type === 'image'" :src="item.media_signed_url || item.media_url" :alt="item.title" class="slide-img"
+                        draggable="false" :decoding="index === currentIndex ? 'sync' : 'async'" :loading="index === currentIndex ? 'eager' : 'lazy'"
+                        :fetchpriority="index === currentIndex ? 'high' : 'low'" />
+                    <video v-else-if="item.media_type === 'video'" :src="item.media_signed_url || item.media_url" class="slide-video" muted loop playsinline
                         :ref="el => videoRefs[index] = el" />
                 </div>
 
-                <!-- 渐变遮罩 -->
+                <!-- 氛围层：极光光晕（动态背景） -->
+                <div class="slide-aurora" aria-hidden="true">
+                    <span class="aurora-blob blob-teal"></span>
+                    <span class="aurora-blob blob-pink"></span>
+                </div>
+
+                <!-- 色调渐变 + 暗角 + 颗粒（层次与氛围） -->
                 <div class="slide-overlay"></div>
+                <div class="slide-vignette"></div>
+                <div class="slide-grain"></div>
 
-                <!-- 文字内容 -->
-                <div class="slide-content" v-if="item.title || item.subtitle">
-                    <div class="slide-badge" v-if="item.subtitle">FEATURED</div>
-                    <h2 class="slide-title">{{ item.title }}</h2>
-                    <p class="slide-subtitle" v-if="item.subtitle">{{ item.subtitle }}</p>
-                    <button class="slide-btn" v-if="item.link" @click="handleClick(item.link)">
-                        探索更多 →
-                    </button>
+                <!-- 文字侧局部压暗，保证文字清晰的同时不牺牲画面右侧的锐度 -->
+                <div class="slide-scrim"></div>
+
+                <!-- 切场扫光动效 -->
+                <div class="slide-sweep"></div>
+
+                <!-- 文字与主交互区 (MIKU TEAL Hero Column) -->
+                <div class="slide-content" :style="contentParallaxStyle">
+                    <div class="hero-kicker">♪ MIKU × CODE × LIFE</div>
+
+                    <h1 class="slide-title">
+                        {{ item.title || '探索技术前沿' }}
+                    </h1>
+
+                    <div class="hero-en-subtitle">EXPLORE THE FRONTIER</div>
+
+                    <p class="slide-subtitle">
+                        {{ item.subtitle || '记录前端、数据库与底层技术的学习轨迹，也收藏生活里的光。用代码写歌，用文字存档时光。' }}
+                    </p>
+
+                    <div class="slide-actions">
+                        <button class="cta-primary tactile-btn shine-effect" @click="handleClick(item.link || '/articles')">
+                            <span>开始阅读</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <button class="cta-secondary tactile-btn" @click="handleAbout">
+                            <span>关于我</span>
+                        </button>
+                    </div>
+
                 </div>
-
-                <!-- 底部装饰线 -->
-                <div class="slide-deco-line"></div>
             </div>
 
-            <!-- 左右箭头（桌面端） -->
-            <button class="arrow arrow-left" @click="prev" v-show="banners.length > 1">
-                <el-icon>
-                    <ArrowLeft />
-                </el-icon>
-            </button>
-            <button class="arrow arrow-right" @click="next" v-show="banners.length > 1">
-                <el-icon>
-                    <ArrowRight />
-                </el-icon>
-            </button>
-
-            <!-- 指示器 -->
-            <div class="indicators" v-if="banners.length > 1">
-                <div v-for="(item, index) in banners" :key="item.id" class="indicator"
-                    :class="{ active: currentIndex === index }" @click="goTo(index)">
-                    <div class="indicator-progress" v-if="currentIndex === index"></div>
-                </div>
-            </div>
-
-            <!-- 滚动提示（桌面端） -->
-            <div class="scroll-hint">
-                <div class="scroll-mouse">
-                    <div class="scroll-dot"></div>
-                </div>
-                <span>向下滚动</span>
-            </div>
+            <!-- 左右切换箭头（全局，不随 slide 复制） -->
+            <button type="button" class="arrow arrow-left tactile-btn" @click.stop="prev" aria-label="上一张">‹</button>
+            <button type="button" class="arrow arrow-right tactile-btn" @click.stop="next" aria-label="下一张">›</button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { getActiveBanners } from '../api/banner';
+
+const props = defineProps({
+    stats: {
+        type: Object,
+        default: () => ({ articles: 0, categories: 0, tags: 0, comments: 0, totalViews: 0 }),
+    },
+});
 
 const router = useRouter();
 const banners = ref([]);
@@ -78,7 +90,49 @@ const trackRef = ref(null);
 const videoRefs = ref({});
 
 let autoTimer = null;
-const INTERVAL = 5000;
+const INTERVAL = 5500;
+
+// 暂停状态：悬停暂停 or 用户手动暂停
+const hovering = ref(false);
+const manualPause = ref(false);
+const reducedMotion = ref(false);
+const isPaused = computed(() => hovering.value || manualPause.value);
+
+// 视差坐标
+const mouseX = ref(0);
+const mouseY = ref(0);
+
+// 缩放留出视差余量即可，过大的 upscale 会牺牲锐度 → 由 1.05 收敛到 1.035
+const mediaParallaxStyle = computed(() => {
+    const tx = (mouseX.value - 0.5) * -18;
+    const ty = (mouseY.value - 0.5) * -12;
+    return {
+        transform: `scale(1.035) translate(${tx}px, ${ty}px)`
+    };
+});
+
+const contentParallaxStyle = computed(() => {
+    const tx = (mouseX.value - 0.5) * 12;
+    const ty = (mouseY.value - 0.5) * 8;
+    return {
+        transform: `translate(${tx}px, ${ty}px)`
+    };
+});
+
+let parallaxRaf = null;
+const handleParallax = (e) => {
+    if (reducedMotion.value || !trackRef.value) return;
+    if (parallaxRaf) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    parallaxRaf = requestAnimationFrame(() => {
+        parallaxRaf = null;
+        if (!trackRef.value) return;
+        const rect = trackRef.value.getBoundingClientRect();
+        mouseX.value = (clientX - rect.left) / rect.width;
+        mouseY.value = (clientY - rect.top) / rect.height;
+    });
+};
 
 // 触摸状态
 const touchState = {
@@ -90,21 +144,56 @@ const touchState = {
     swiping: false,
 };
 
+// 鼠标拖拽状态（桌面端滑动切换）
+const dragState = { active: false, startX: 0, deltaX: 0, moved: false };
+const dragging = ref(false);
+// 拖拽结束后的那次 click 需要被吞掉，否则会误触 CTA / 缩略图
+let suppressNextClick = false;
+
+// 精选初音插画与思考主题
+const fallbackBanners = [
+    {
+        id: 'f1',
+        media_type: 'image',
+        media_url: '/images/miku/miku_wp_1.jpg',
+        title: '探索技术前沿',
+        subtitle: '记录前端、数据库与底层技术的学习轨迹，也收藏生活里的光。用代码写歌，用文字存档时光。',
+        link: '/articles'
+    },
+    {
+        id: 'f2',
+        media_type: 'image',
+        media_url: '/images/miku/miku_wp_8.jpg',
+        title: '从零搭建高可用前端组件库',
+        subtitle: '基于 Vue3 组合式 API 与 Vite，构建规范统一、轻量优雅的现代 UI 组件体系。',
+        link: '/articles'
+    },
+    {
+        id: 'f3',
+        media_type: 'image',
+        media_url: '/images/miku/miku_wp_9.jpg',
+        title: 'MySQL 索引与数仓分层实战',
+        subtitle: '深入探讨 B+Tree 索引底层原理、覆盖索引优化与数据仓库分层架构设计。',
+        link: '/articles'
+    }
+];
+
 const fetchBanners = async () => {
     try {
         const res = await getActiveBanners();
-        banners.value = res.data;
-        await nextTick();
-        startAuto();
-        playCurrentVideo();
+        if (res && res.data && res.data.length > 0) {
+            banners.value = res.data;
+        } else {
+            banners.value = fallbackBanners;
+        }
     } catch (error) {
         console.error('获取轮播图失败:', error);
+        banners.value = fallbackBanners;
+    } finally {
+        await nextTick();
+        if (!reducedMotion.value) startAuto();
+        playCurrentVideo();
     }
-};
-
-const goTo = (index) => {
-    currentIndex.value = index;
-    playCurrentVideo();
 };
 
 const next = () => {
@@ -114,6 +203,11 @@ const next = () => {
 
 const prev = () => {
     currentIndex.value = (currentIndex.value - 1 + banners.value.length) % banners.value.length;
+    playCurrentVideo();
+};
+
+const goToSlide = (idx) => {
+    currentIndex.value = idx;
     playCurrentVideo();
 };
 
@@ -129,8 +223,16 @@ const stopAuto = () => {
     }
 };
 
-const pauseAuto = () => stopAuto();
-const resumeAuto = () => startAuto();
+// 悬停暂停 / 离开恢复（用户手动暂停时不自动恢复）
+const onTrackEnter = () => {
+    hovering.value = true;
+    stopAuto();
+};
+
+const onTrackLeave = () => {
+    hovering.value = false;
+    if (!manualPause.value) startAuto();
+};
 
 const playCurrentVideo = () => {
     nextTick(() => {
@@ -145,6 +247,11 @@ const playCurrentVideo = () => {
             }
         });
     });
+};
+
+const handleAbout = () => {
+    if (suppressNextClick) return;
+    router.push('/about');
 };
 
 // ==================== 触摸滑动 ====================
@@ -164,16 +271,16 @@ const onTouchMove = (e) => {
     touchState.moveX = t.clientX - touchState.startX;
     touchState.moveY = t.clientY - touchState.startY;
 
-    // 判断是否为水平滑动（水平位移 > 垂直位移）
     if (!touchState.swiping && Math.abs(touchState.moveX) > 10) {
         if (Math.abs(touchState.moveX) > Math.abs(touchState.moveY)) {
             touchState.swiping = true;
         }
     }
 
-    // 水平滑动时阻止默认滚动
     if (touchState.swiping) {
-        e.preventDefault();
+        if (e.cancelable) {
+            e.preventDefault();
+        }
     }
 };
 
@@ -182,7 +289,6 @@ const onTouchEnd = () => {
     const distance = touchState.moveX;
 
     if (touchState.swiping) {
-        // 快速轻扫或滑动超过 50px
         const isQuickSwipe = elapsed < 300 && Math.abs(distance) > 30;
         const isLongSwipe = Math.abs(distance) > 50;
 
@@ -195,12 +301,51 @@ const onTouchEnd = () => {
         }
     }
 
-    resumeAuto();
+    if (!manualPause.value) startAuto();
+};
+
+// ==================== 鼠标拖拽滑动（桌面端） ====================
+const onDragStart = (e) => {
+    if (e.button !== 0) return;
+    dragState.active = true;
+    dragState.startX = e.clientX;
+    dragState.deltaX = 0;
+    dragState.moved = false;
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+};
+
+const onDragMove = (e) => {
+    if (!dragState.active) return;
+    dragState.deltaX = e.clientX - dragState.startX;
+    if (Math.abs(dragState.deltaX) > 8) {
+        dragState.moved = true;
+        dragging.value = true;
+    }
+};
+
+const onDragEnd = () => {
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    const distance = dragState.deltaX;
+    const moved = dragState.moved;
+    dragState.active = false;
+    dragging.value = false;
+
+    if (moved) {
+        // 吞掉拖拽后紧跟的那次 click
+        suppressNextClick = true;
+        setTimeout(() => { suppressNextClick = false; }, 60);
+        if (distance < -60) {
+            next();
+        } else if (distance > 60) {
+            prev();
+        }
+    }
 };
 
 const handleClick = (link) => {
-    // 如果刚发生过滑动，不触发点击
-    if (touchState.swiping) return;
+    if (suppressNextClick || touchState.swiping) return;
     if (link.startsWith('http')) {
         window.open(link, '_blank');
     } else {
@@ -208,20 +353,33 @@ const handleClick = (link) => {
     }
 };
 
-// ==================== 键盘 ====================
 const onKeyDown = (e) => {
     if (e.key === 'ArrowLeft') prev();
     if (e.key === 'ArrowRight') next();
 };
 
+const handleMotionChange = (e) => {
+    reducedMotion.value = !!e.detail?.reduced;
+    if (reducedMotion.value) {
+        stopAuto();
+    } else if (!isPaused.value) {
+        startAuto();
+    }
+};
+
 onMounted(() => {
+    reducedMotion.value = document.documentElement.classList.contains('reduce-motion');
     fetchBanners();
     document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('motion-mode-change', handleMotionChange);
 });
 
 onUnmounted(() => {
     stopAuto();
     document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    window.removeEventListener('motion-mode-change', handleMotionChange);
 });
 </script>
 
@@ -229,6 +387,7 @@ onUnmounted(() => {
 .banner-wrapper {
     position: relative;
     width: 100%;
+    overflow: hidden;
 }
 
 .banner-track {
@@ -237,8 +396,14 @@ onUnmounted(() => {
     height: 100vh;
     min-height: 600px;
     overflow: hidden;
-    background: #0a0a0f;
+    background: #071426;
     touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+}
+
+.banner-track.is-dragging {
+    cursor: grabbing;
 }
 
 /* ==================== 轮播项 ==================== */
@@ -246,27 +411,43 @@ onUnmounted(() => {
     position: absolute;
     inset: 0;
     opacity: 0;
-    transform: scale(1.05);
-    transition: opacity 1s ease, transform 6s ease;
+    visibility: hidden;
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
     z-index: 1;
 }
 
 .banner-slide.active {
     opacity: 1;
-    transform: scale(1);
+    visibility: visible;
     z-index: 2;
 }
 
+/* 媒体层：GPU 合成 + 轻微提锐，换取更清晰的画面 */
 .slide-media {
     position: absolute;
     inset: 0;
+    z-index: 0;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 .slide-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 25%;
     display: block;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    filter: saturate(1.05) contrast(1.04);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+}
+
+/* 悬停反馈：画面轻微推近并提亮（配合视差形成「景深呼吸」） */
+.banner-track:hover .banner-slide.active .slide-img {
+    transform: translateZ(0) scale(1.028);
+    filter: saturate(1.12) contrast(1.06) brightness(1.04);
 }
 
 .slide-video {
@@ -275,134 +456,299 @@ onUnmounted(() => {
     object-fit: cover;
 }
 
-/* 渐变遮罩 */
+/* ==================== 氛围层 ==================== */
+/* 动态极光光晕：以 screen 混合叠加在画面上，形成青/粉灯光氛围 */
+.slide-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
+
+.aurora-blob {
+    position: absolute;
+    width: 46vw;
+    height: 46vw;
+    min-width: 320px;
+    min-height: 320px;
+    border-radius: 50%;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.blob-teal {
+    top: -14%;
+    left: -8%;
+    background: radial-gradient(circle, rgba(57, 197, 187, 0.45) 0%, rgba(57, 197, 187, 0.15) 45%, transparent 70%);
+    animation: auroraDrift 17s ease-in-out infinite alternate;
+}
+
+.blob-pink {
+    right: -10%;
+    bottom: -18%;
+    background: radial-gradient(circle, rgba(255, 126, 157, 0.4) 0%, rgba(255, 126, 157, 0.12) 45%, transparent 70%);
+    animation: auroraDrift 23s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes auroraDrift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(7%, 9%, 0) scale(1.18); }
+}
+
+/* 色调渐变遮罩（保留原有结构，均值下调暗度以提升画面清晰度） */
 .slide-overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
+    pointer-events: none;
     background:
         linear-gradient(180deg,
-            rgba(0, 0, 0, 0.3) 0%,
-            rgba(0, 0, 0, 0.05) 40%,
-            rgba(0, 0, 0, 0.1) 70%,
-            rgba(0, 0, 0, 0.6) 100%),
+            rgba(9, 18, 34, 0.34) 0%,
+            rgba(9, 18, 34, 0.06) 40%,
+            rgba(9, 18, 34, 0.18) 72%,
+            rgba(7, 20, 38, 0.62) 100%),
         linear-gradient(90deg,
-            rgba(0, 0, 0, 0.45) 0%,
-            rgba(0, 0, 0, 0.08) 50%,
+            rgba(10, 26, 40, 0.5) 0%,
+            rgba(10, 26, 40, 0.12) 46%,
             transparent 100%);
+}
+
+/* 暗角：聚焦中心、加深景深 */
+.slide-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 118% 88% at 50% 42%, transparent 46%, rgba(3, 10, 22, 0.5) 100%);
+}
+
+/* 胶片颗粒：极细噪点，消除渐变断层、增加质感 */
+.slide-grain {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+}
+
+/* 文字侧局部压暗：只压左下角，右侧画面保持全锐度 */
+.slide-scrim {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 64%;
+    height: 82%;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse 96% 82% at 10% 98%,
+            rgba(5, 18, 32, 0.72) 0%,
+            rgba(5, 18, 32, 0.34) 52%,
+            transparent 76%);
+}
+
+/* 切场扫光 */
+.slide-sweep {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(105deg, transparent 32%, rgba(255, 255, 255, 0.16) 48%, transparent 64%);
+}
+
+.banner-slide.active .slide-sweep {
+    animation: sweepAcross 1.5s 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes sweepAcross {
+    0% { opacity: 0; transform: translateX(-42%); }
+    28% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateX(42%); }
 }
 
 /* ==================== 文字内容 ==================== */
 .slide-content {
     position: absolute;
     left: 80px;
-    bottom: 120px;
-    z-index: 2;
-    max-width: 620px;
+    bottom: 60px;
+    z-index: 3;
+    max-width: clamp(340px, 42vw, 560px);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
 }
 
-.slide-badge {
-    display: inline-block;
-    padding: 6px 20px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.85);
+/* 切场时的内容逐级上浮（层级动效） */
+.hero-kicker,
+.slide-title,
+.hero-en-subtitle,
+.slide-subtitle,
+.slide-actions {
+    opacity: 0;
+}
+
+.banner-slide.active .hero-kicker { animation: riseIn 0.6s 0.04s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.banner-slide.active .slide-title { animation: riseIn 0.7s 0.12s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.banner-slide.active .hero-en-subtitle { animation: riseIn 0.7s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.banner-slide.active .slide-subtitle { animation: riseIn 0.7s 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.banner-slide.active .slide-actions { animation: riseIn 0.7s 0.38s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes riseIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+    background: rgba(57, 197, 187, 0.22);
+    border: 1px solid rgba(57, 197, 187, 0.45);
     font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 4px;
-    border-radius: 30px;
-    margin-bottom: 20px;
-    animation: fadeSlideUp 0.8s ease 0.1s both;
+    font-weight: 700;
+    color: #EAF9F8;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    box-shadow: 0 0 18px rgba(57, 197, 187, 0.25);
 }
 
+.hero-kicker::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #39C5BB;
+    box-shadow: 0 0 10px #39C5BB;
+    animation: kickerPulse 2s ease-in-out infinite;
+}
+
+@keyframes kickerPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.7); }
+}
+
+/* 标题：中性黑阴影比彩色阴影更锐利，配合禁用字距挤压提升清晰度 */
 .slide-title {
-    font-size: 56px;
+    font-size: clamp(32px, 4.2vw, 54px);
     font-weight: 900;
-    color: #fff;
-    margin: 0 0 16px;
-    line-height: 1.1;
-    letter-spacing: -1px;
-    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-    animation: fadeSlideUp 0.8s ease 0.3s both;
+    color: #ffffff;
+    margin: 0 0 6px;
+    line-height: 1.18;
+    letter-spacing: -0.5px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.5),
+        0 6px 22px rgba(0, 0, 0, 0.42);
+}
+
+.hero-en-subtitle {
+    font-family: 'Audiowide', cursive, sans-serif;
+    font-size: clamp(14px, 1.8vw, 20px);
+    color: #8BE9E0;
+    letter-spacing: 2.5px;
+    margin-bottom: 14px;
+    text-shadow: 0 2px 12px rgba(57, 197, 187, 0.55);
 }
 
 .slide-subtitle {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.7);
-    margin: 0 0 32px;
+    font-size: clamp(13.5px, 1.4vw, 15.5px);
+    color: rgba(255, 255, 255, 0.94);
+    margin: 0 0 24px;
     line-height: 1.7;
-    font-weight: 300;
-    animation: fadeSlideUp 0.8s ease 0.5s both;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
 }
 
-.slide-btn {
-    display: inline-block;
-    padding: 14px 40px;
-    background: #fff;
+.slide-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #39C5BB 0%, #12A79C 100%);
     border: none;
-    border-radius: 50px;
-    color: #0a0a0f;
-    font-size: 15px;
-    font-weight: 700;
+    border-radius: var(--radius-pill);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
     cursor: pointer;
-    letter-spacing: 1px;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    animation: fadeSlideUp 0.8s ease 0.7s both;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 20px rgba(57, 197, 187, 0.5);
+    transition: all 0.25s ease;
 }
 
-.slide-btn:hover {
-    background: rgba(255, 255, 255, 0.9);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    letter-spacing: 3px;
+.cta-primary:hover {
+    background: linear-gradient(135deg, #45D6CB 0%, #12A79C 100%);
+    box-shadow: 0 12px 32px rgba(57, 197, 187, 0.68), 0 0 26px rgba(57, 197, 187, 0.4);
+    transform: translateY(-2px);
 }
 
-/* 底部装饰线 */
-.slide-deco-line {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    z-index: 3;
-    background: linear-gradient(90deg,
-            transparent 0%, rgba(255, 255, 255, 0.3) 20%,
-            rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.3) 80%, transparent 100%);
+.btn-arrow {
+    font-size: 15px;
+    transition: transform 0.2s ease;
 }
 
-@keyframes fadeSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(40px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.cta-primary:hover .btn-arrow {
+    transform: translateX(4px);
 }
 
-/* ==================== 箭头 ==================== */
+.cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 26px;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-pill);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cta-secondary:hover {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: #FFFFFF;
+    transform: translateY(-2px);
+}
+
+
+
+/* ==================== 左右切换箭头 ==================== */
 .arrow {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 10;
-    width: 56px;
-    height: 56px;
+    z-index: 11;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    color: #fff;
-    font-size: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(9, 20, 34, 0.65);
+    color: #ffffff;
+    font-size: 22px;
+    line-height: 1;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.4s ease;
-    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.55;
 }
 
 .banner-track:hover .arrow {
@@ -410,324 +756,186 @@ onUnmounted(() => {
 }
 
 .arrow:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(57, 197, 187, 0.85);
+    border-color: #39C5BB;
+    box-shadow: 0 0 24px rgba(57, 197, 187, 0.6);
     transform: translateY(-50%) scale(1.08);
 }
 
-.arrow-left {
-    left: 40px;
+.arrow:active {
+    transform: translateY(-50%) scale(0.94);
 }
 
-.arrow-right {
-    right: 40px;
-}
+.arrow-left { left: 28px; }
+.arrow-right { right: 28px; }
 
-/* ==================== 指示器 ==================== */
-.indicators {
-    position: absolute;
-    bottom: 60px;
-    right: 80px;
-    z-index: 10;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.indicator {
-    width: 40px;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    overflow: hidden;
-    transition: all 0.4s ease;
-}
-
-.indicator.active {
-    width: 60px;
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.indicator-progress {
-    height: 100%;
-    background: #fff;
-    border-radius: 2px;
-    animation: progressAnim 5s linear;
-}
-
-@keyframes progressAnim {
-    from {
-        width: 0;
-    }
-
-    to {
-        width: 100%;
-    }
-}
-
-/* ==================== 滚动提示 ==================== */
-.scroll-hint {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 11px;
-    letter-spacing: 2px;
-    animation: scrollBounce 2s ease-in-out infinite;
-}
-
-.scroll-mouse {
-    width: 22px;
-    height: 34px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    display: flex;
-    justify-content: center;
-    padding-top: 6px;
-}
-
-.scroll-dot {
-    width: 3px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 2px;
-    animation: scrollDot 1.5s ease-in-out infinite;
-}
-
-@keyframes scrollDot {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    50% {
-        opacity: 0.3;
-        transform: translateY(8px);
-    }
-}
-
-@keyframes scrollBounce {
-
-    0%,
-    100% {
-        transform: translateX(-50%) translateY(0);
-    }
-
-    50% {
-        transform: translateX(-50%) translateY(-6px);
-    }
-}
-
-/* ==================== 响应式 — 平板 ==================== */
+/* ==================== 响应式适配 ==================== */
 @media (max-width: 1024px) {
     .slide-content {
-        left: 50px;
-        bottom: 100px;
-        max-width: 480px;
+        left: 40px;
+        bottom: 70px;
+        max-width: 460px;
     }
-
-    .slide-title {
-        font-size: 42px;
-    }
-
-    .slide-subtitle {
-        font-size: 16px;
-    }
-
-    .indicators {
-        right: 50px;
-    }
+    .arrow-left { left: 16px; }
+    .arrow-right { right: 16px; }
 }
 
-/* ==================== 响应式 — 手机 ==================== */
 @media (max-width: 768px) {
     .banner-track {
-        height: 56vh;
+        height: clamp(340px, 52vh, 460px);
         min-height: 340px;
+        cursor: default;
     }
 
-    /* 遮罩加强：手机屏幕小，文字需要更强对比 */
-    .slide-overlay {
-        background:
-            linear-gradient(180deg,
-                rgba(0, 0, 0, 0.15) 0%,
-                rgba(0, 0, 0, 0.25) 40%,
-                rgba(0, 0, 0, 0.5) 70%,
-                rgba(0, 0, 0, 0.75) 100%);
+    .slide-img {
+        object-position: center 25%;
     }
 
-    /* 文字区域调整 */
+    .slide-scrim {
+        width: 100%;
+        height: 90%;
+        background: linear-gradient(to top,
+            rgba(5, 18, 32, 0.94) 0%,
+            rgba(5, 18, 32, 0.65) 50%,
+            rgba(5, 18, 32, 0.15) 80%,
+            transparent 100%);
+    }
+
     .slide-content {
         left: 20px;
         right: 20px;
-        bottom: 70px;
+        bottom: 32px;
         max-width: none;
+        padding-top: calc(var(--navbar-clearance, 76px) + 12px);
     }
 
-    .slide-badge {
-        padding: 4px 14px;
-        font-size: 9px;
-        letter-spacing: 3px;
-        margin-bottom: 12px;
+    .hero-kicker {
+        font-size: 10px;
+        padding: 3px 10px;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
     }
 
     .slide-title {
-        font-size: 24px;
-        margin-bottom: 10px;
-        letter-spacing: 0;
-        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+        font-size: clamp(22px, 5.5vw, 28px);
+        line-height: 1.2;
+        margin-bottom: 4px;
+    }
+
+    .hero-en-subtitle {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        margin-bottom: 8px;
     }
 
     .slide-subtitle {
-        font-size: 13px;
-        margin-bottom: 18px;
-        line-height: 1.5;
-        /* 手机端最多两行 */
-        overflow: hidden;
-        display: -webkit-box;
+        font-size: 12.5px;
+        line-height: 1.55;
+        margin-bottom: 16px;
         -webkit-line-clamp: 2;
+        display: -webkit-box;
         -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
-    .slide-btn {
-        padding: 10px 28px;
-        font-size: 13px;
-        border-radius: 40px;
+    .slide-actions {
+        gap: 10px;
+        margin-bottom: 0;
     }
 
-    /* 箭头：手机端常显，更小 */
-    .arrow {
-        opacity: 0.7;
-        width: 36px;
-        height: 36px;
-        font-size: 14px;
-        background: rgba(0, 0, 0, 0.25);
-        border-color: rgba(255, 255, 255, 0.12);
+    .cta-primary {
+        padding: 8px 22px;
+        font-size: 12.5px;
     }
 
-    .banner-track:hover .arrow {
-        opacity: 0.7;
+    .cta-secondary {
+        padding: 8px 18px;
+        font-size: 12.5px;
     }
 
-    .arrow:hover {
-        opacity: 1;
-    }
-
-    .arrow-left {
-        left: 12px;
-    }
-
-    .arrow-right {
-        right: 12px;
-    }
-
-    /* 指示器：居中底部 */
-    .indicators {
-        left: 50%;
-        right: auto;
-        bottom: 20px;
-        transform: translateX(-50%);
-        gap: 8px;
-    }
-
-    .indicator {
-        width: 20px;
-        height: 3px;
-    }
-
-    .indicator.active {
-        width: 32px;
-    }
-
-    /* 隐藏滚动提示 */
-    .scroll-hint {
-        display: none;
-    }
+    .arrow { display: none; }
+    .aurora-blob { filter: blur(56px); opacity: 0.8; }
 }
 
-/* ==================== 响应式 — 小屏手机 ==================== */
-@media (max-width: 400px) {
+@media (max-width: 480px) {
     .banner-track {
-        height: 50vh;
+        height: clamp(300px, 46vh, 380px);
         min-height: 300px;
     }
 
     .slide-content {
-        bottom: 60px;
+        left: 14px;
+        right: 14px;
+        bottom: 24px;
     }
 
     .slide-title {
         font-size: 20px;
     }
 
+    .hero-en-subtitle {
+        font-size: 10px;
+        margin-bottom: 6px;
+    }
+
     .slide-subtitle {
         font-size: 12px;
+        margin-bottom: 12px;
     }
 
-    .slide-btn {
-        padding: 8px 22px;
+    .cta-primary {
+        padding: 7px 16px;
         font-size: 12px;
     }
 
-    .indicators {
-        bottom: 16px;
+    .cta-secondary {
+        padding: 7px 14px;
+        font-size: 12px;
     }
 }
 
-/* ==================== 横屏手机 ==================== */
-@media (max-height: 500px) and (orientation: landscape) {
-    .banner-track {
-        height: 100vh;
-        min-height: auto;
+/* ==================== 动效克制（跟随全局 reduce-motion 与系统偏好） ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .aurora-blob,
+    .hero-kicker::before {
+        animation: none;
     }
+    .slide-grain,
+    .slide-sweep {
+        display: none;
+    }
+    .banner-slide.active .hero-kicker,
+    .banner-slide.active .slide-title,
+    .banner-slide.active .hero-en-subtitle,
+    .banner-slide.active .slide-subtitle,
+    .banner-slide.active .slide-actions {
+        animation: none;
+        opacity: 1;
+    }
+}
 
-    .slide-content {
-        left: 80px;
-        right: auto;
-        bottom: 60px;
-        max-width: 50%;
-    }
+html.reduce-motion .aurora-blob,
+html.reduce-motion .hero-kicker::before {
+    animation: none;
+}
 
-    .slide-title {
-        font-size: 28px;
-    }
+html.reduce-motion .slide-grain,
+html.reduce-motion .slide-sweep {
+    display: none;
+}
 
-    .slide-subtitle {
-        font-size: 14px;
-        margin-bottom: 16px;
-    }
+html.reduce-motion .hero-kicker,
+html.reduce-motion .slide-title,
+html.reduce-motion .hero-en-subtitle,
+html.reduce-motion .slide-subtitle,
+html.reduce-motion .slide-actions {
+    animation: none;
+    opacity: 1;
+}
 
-    .slide-btn {
-        padding: 8px 24px;
-        font-size: 13px;
-    }
-
-    .arrow {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-    }
-
-    .arrow-left {
-        left: 16px;
-    }
-
-    .arrow-right {
-        right: 16px;
-    }
-
-    .indicators {
-        bottom: 16px;
-        right: 40px;
-    }
+html.reduce-motion .slide-media,
+html.reduce-motion .slide-content,
+html.reduce-motion .slide-img {
+    transition: none;
 }
 </style>

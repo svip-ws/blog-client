@@ -20,16 +20,9 @@ export function replyMessage(id, data) {
   return request({ url: `/message/${id}/reply`, method: "post", data });
 }
 
-// 上传图片
-export function uploadMessageImage(file) {
-  const formData = new FormData();
-  formData.append("image", file);
-  return request({
-    url: "/message/upload",
-    method: "post",
-    data: formData,
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+// 删除自己发表的留言
+export function deleteMyMessage(id) {
+  return request({ url: `/message/${id}`, method: "delete" });
 }
 
 // 获取用户点赞状态
@@ -40,5 +33,8 @@ export function getLikedStatus() {
 export function getImageFullUrl(url) {
   if (!url) return "";
   if (url.startsWith("http")) return url;
-  return `http://localhost:3001${url}`; // 上线后改成你的域名
+  // 生产环境：VITE_API_BASE_URL=/api → 取 origin 根路径，图片走同源 /uploads（经 Nginx 反代）
+  // 开发环境：VITE_API_BASE_URL=http://localhost:3001/api → 取 http://localhost:3001 直连后端
+  const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+  return base ? `${base}${url}` : url;
 }

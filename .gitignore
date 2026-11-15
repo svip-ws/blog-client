@@ -13,6 +13,9 @@ dist
 dist-ssr
 coverage
 *.local
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -37,3 +40,10 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# 压缩包与部署包
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz

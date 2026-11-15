@@ -48,11 +48,6 @@ const routes = [
     component: () => import("../views/tag-articles/index.vue"),
   },
   {
-    path: "/login",
-    name: "ClientLogin",
-    component: () => import("../views/login/index.vue"),
-  },
-  {
     path: "/register",
     name: "ClientRegister",
     component: () => import("../views/register/index.vue"),
@@ -86,29 +81,14 @@ const routes = [
     component: () => import("../views/messages/index.vue"),
   },
   {
-    path: "/products",
-    name: "Products",
-    component: () => import("../views/products/index.vue"),
+    path: "/snapshots",
+    name: "Snapshots",
+    component: () => import("../views/snapshots/index.vue"),
   },
   {
-    path: "/products/:id",
-    name: "ProductDetail",
-    component: () => import("../views/products/detail.vue"),
-  },
-  {
-    path: "/cart",
-    name: "Cart",
-    component: () => import("../views/cart/index.vue"),
-  },
-  {
-    path: "/checkout",
-    component: () => import("../views/front/Checkout.vue"),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/orders",
-    component: () => import("../views/front/Orders.vue"),
-    meta: { requiresAuth: true },
+    path: "/ai",
+    name: "AiWorkshop",
+    component: () => import("../views/ai/index.vue"),
   },
   // 这个必须放在所有路由的最后面
   {
@@ -126,6 +106,64 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // 路由切换的滚动策略：
+  // - 浏览器后退/前进：恢复原滚动位置
+  // - 仅 query 变化（筛选、搜索词）：不动滚动
+  // - 进入新页面：回到顶部（回到顶部会触发 scroll 事件，NavBar 的胶囊/吸顶形态随之复位）
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.path === from.path) return {};
+    return { top: 0 };
+  },
 });
+
+// 客户端鉴权守卫：路由表里标注了 meta.requiresAuth 的页面，未登录一律回登录页，
+// 并带上 redirect；登录成功后回跳原目标（views/login/index.vue 已读取该参数）。
+router.beforeEach((to) => {
+  if (to.meta?.requiresAuth && !localStorage.getItem("client_token")) {
+    return { path: "/login", query: { redirect: to.fullPath } };
+  }
+  return true;
+});
+
+// 路由 chunk 智能预加载（悬停/空闲时提前拉取 JS/CSS，切换零等待）
+const prefetchedPaths = new Set();
+
+export function prefetchRoute(path) {
+  if (!path || prefetchedPaths.has(path)) return;
+  try {
+    const resolved = router.resolve(path);
+    for (const record of resolved.matched || []) {
+      const comp = record.components?.default;
+      if (typeof comp === "function" && !prefetchedPaths.has(record.path)) {
+        prefetchedPaths.add(record.path);
+        Promise.resolve(comp()).catch(() => {});
+      }
+    }
+    prefetchedPaths.add(path);
+  } catch {
+    // 忽略未匹配路由
+  }
+}
+
+export function startIdlePrefetch() {
+  const hotRoutes = ["/articles", "/categories", "/tags", "/archives", "/messages", "/snapshots", "/about", "/article/1"];
+  const run = () => {
+    let idx = 0;
+    const step = () => {
+      if (idx >= hotRoutes.length) return;
+      prefetchRoute(hotRoutes[idx++]);
+      if (idx < hotRoutes.length) {
+        setTimeout(step, 180);
+      }
+    };
+    step();
+  };
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 1500 });
+  } else {
+    setTimeout(run, 800);
+  }
+}
 
 export default router;
